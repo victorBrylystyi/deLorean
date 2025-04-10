@@ -279,6 +279,7 @@ export class DeLoreanDemo extends Demo {
     render(dt: number) {
 
         super.render(dt);
+
         // const t = dt / 2000;
         // this.modelContainer.position.y = -0.3;
         // this.modelContainer.position.y = -0.3 + Math.sin(t)/8;
@@ -293,7 +294,19 @@ export class DeLoreanDemo extends Demo {
         // });
         if (dissolveSettings.animate) {
             this.clockDissolve += 0.005;
+            const t = this.clockDissolve
             dissolveSettings.progress = Math.cos(this.clockDissolve) * -dissolveSettings.k;
+            this.modelContainer.position.y = -0.3;
+            this.modelContainer.position.y = -0.3 + Math.sin(t)/8;
+            this.modelContainer.rotation.z = Math.cos(t)/16;
+            this.modelContainer.rotation.x = Math.sin(t)/20;
+            this.modelContainer.rotation.y = Math.sin(t)/14;
+
+            // this.axels.forEach(mesh => {
+            //     mesh.rotation.y = Math.sin(t* 2) / 2;
+            //     // mesh.rotation.x = Math.sin(t) / 2;
+            //     // mesh.rotation.z = Math.cos(t) / 2;
+            // });
         } else {
             if (this.clockDissolve !== 0.0) this.clockDissolve = 0.0;
         }
