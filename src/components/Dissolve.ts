@@ -138,7 +138,7 @@ export class Dissolve extends MeshStandardMaterial {
                 varying vec3 vWorldPosition;
 
                 uniform float uDissolveThreshold;
-                uniform float uEdgeWidth;
+                uniform float uEdge;
                 uniform vec3 uEdgeColor;
                 uniform float uFreq;
                 uniform float uAmp;
@@ -155,13 +155,13 @@ export class Dissolve extends MeshStandardMaterial {
 
                 // float noiseValue = snoise(vWorldPosition * 10.0); // Generate noise based on world position
                 float noiseValue = snoise(vWorldPosition * uFreq) * uAmp;
-                float dissolveFactor = smoothstep(uDissolveThreshold - uEdgeWidth, uDissolveThreshold, noiseValue);
+                float dissolveFactor = smoothstep(uDissolveThreshold - uEdge, uDissolveThreshold, noiseValue);
 
                 if (noiseValue < uDissolveThreshold) {
                     discard; // Discard fragments below the dissolve threshold
                 }
 
-                float edgeFactor = smoothstep(uDissolveThreshold, uDissolveThreshold + uEdgeWidth, noiseValue);
+                float edgeFactor = smoothstep(uDissolveThreshold, uDissolveThreshold + uEdge, noiseValue);
                 vec3 finalColor = mix(uEdgeColor, gl_FragColor.rgb, edgeFactor);
 
                 gl_FragColor = vec4(finalColor, 1.0);
