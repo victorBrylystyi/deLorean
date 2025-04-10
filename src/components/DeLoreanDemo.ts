@@ -294,13 +294,15 @@ export class DeLoreanDemo extends Demo {
         // });
         if (dissolveSettings.animate) {
             this.clockDissolve += 0.005;
-            const t = this.clockDissolve
+            const t = this.clockDissolve;
             dissolveSettings.progress = Math.cos(this.clockDissolve) * -dissolveSettings.k;
             this.modelContainer.position.y = -0.3;
             this.modelContainer.position.y = -0.3 + Math.sin(t)/8;
             this.modelContainer.rotation.z = Math.cos(t)/16;
             this.modelContainer.rotation.x = Math.sin(t)/20;
             this.modelContainer.rotation.y = Math.sin(t)/14;
+
+            dissolveUniformData.uFreq.value = Math.abs(Math.cos(t * 0.45)) * 2.0;
 
             // this.axels.forEach(mesh => {
             //     mesh.rotation.y = Math.sin(t* 2) / 2;
