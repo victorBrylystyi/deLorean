@@ -18,7 +18,7 @@ export const dissolveUniformData = {
         value: 1.0
     },
     uEdge: {
-        value: 0.8
+        value: 1.82
     },
     uEdgeWidth: {
         value: 0.3
