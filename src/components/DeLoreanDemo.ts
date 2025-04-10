@@ -240,6 +240,8 @@ export class DeLoreanDemo extends Demo {
             dissolveSettings.animate = value;
         });
         this.gui.add(dissolveSettings, "progress", -dissolveSettings.k, dissolveSettings.k, 0.001).name("Progress");
+
+        this.gui.add(dissolveSettings, "kFreg", 0.0, 1.0, 0.001).name("K Freg");
         // console.log(this.materials);
         // console.log(this.model.scene)
 
@@ -302,7 +304,7 @@ export class DeLoreanDemo extends Demo {
             this.modelContainer.rotation.x = Math.sin(t)/20;
             this.modelContainer.rotation.y = Math.sin(t)/14;
 
-            dissolveUniformData.uFreq.value = Math.abs(Math.cos(t * 0.45)) * 2.0;
+            dissolveUniformData.uFreq.value = Math.abs(Math.cos(t * dissolveSettings.kFreg)) * 2.0;
 
             // this.axels.forEach(mesh => {
             //     mesh.rotation.y = Math.sin(t* 2) / 2;
