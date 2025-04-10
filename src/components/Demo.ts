@@ -176,8 +176,9 @@ export class Demo {
 
         const w = this.rootElement.clientWidth;
         const h = this.rootElement.clientHeight;
+        const dpr = window.devicePixelRatio;
 
-        this.bloomPass.resolution.set(w, h);
+        this.bloomPass.resolution.set(w * dpr, h * dpr);
 
         this.renderer.setSize(w, h, true);
         this.renderer.setPixelRatio(window.devicePixelRatio);
