@@ -6,7 +6,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 // import { fragmentShader, vertexShader } from "./DissolveMaterial";
 // import CustomShaderMaterial from "three-custom-shader-material/vanilla";
 import { Dissolve } from "./Dissolve";
-import { dissolveUniformData } from "../helpers/constants";
+import { dissolveUniformData, materialParams } from "../helpers/constants";
 import { ParticleMesh } from "./ParticleMesh";
 
 
@@ -205,19 +205,33 @@ export class DeLoreanDemo extends Demo {
                 const newMat = new Dissolve(childMaterial);
                 if (newMat.color.r === 1 && newMat.color.g === 1 && newMat.color.b === 1) {
                     newMat.color.setStyle('#767474');
-                    newMat.metalness = 0.8;
-                    newMat.roughness = 0.05;
+                    newMat.metalness = materialParams.metalness;
+                    newMat.roughness = materialParams.roughness;
+                    this.materials.push(newMat);
                 }
                 // newMat.alphaTest = 0.1;
                 newMat.transparent = true;
 
-                this.materials.push(newMat);
+
                 child.material = newMat;
 
                 // const particle = new ParticleMesh(this.renderer, childGeometry, this.particleTexture);
                 // this.particles.push(particle);
                 // this.scene.add(particle);
             }
+        });
+
+        this.gui.add(materialParams, "metalness", 0.0, 1.0, 0.001).name("Metalness").onChange((value: number) => {
+            this.materials.forEach(material => {
+                material.metalness = value;
+            });
+            materialParams.metalness = value;
+        });
+        this.gui.add(materialParams, "roughness", 0.0, 1.0, 0.001).name("Roughness").onChange((value: number) => {
+            this.materials.forEach(material => {
+                material.roughness = value;
+            });
+            materialParams.roughness = value;
         });
         // console.log(this.materials);
         // console.log(this.model.scene)

@@ -28,3 +28,8 @@ export const dissolveUniformData = {
 export const bloomUniformData = {
     uStrength: new Uniform(1.0)
 };
+
+export const materialParams = {
+    metalness: 0.7,
+    roughness: 0.05,
+};
