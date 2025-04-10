@@ -33,3 +33,9 @@ export const materialParams = {
     metalness: 0.7,
     roughness: 0.05,
 };
+
+export const dissolveSettings = {
+    animate: true,
+    progress: -20.0,
+    k: 18.0
+}

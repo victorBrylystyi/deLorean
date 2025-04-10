@@ -6,7 +6,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 // import { fragmentShader, vertexShader } from "./DissolveMaterial";
 // import CustomShaderMaterial from "three-custom-shader-material/vanilla";
 import { Dissolve } from "./Dissolve";
-import { dissolveUniformData, materialParams } from "../helpers/constants";
+import { dissolveSettings, dissolveUniformData, materialParams } from "../helpers/constants";
 import { ParticleMesh } from "./ParticleMesh";
 
 
@@ -34,6 +34,8 @@ export class DeLoreanDemo extends Demo {
     mouse = new Vector2();
     model!: GLTF;
     axels: Mesh[] = [];
+
+    clockDissolve = 0;
 
     onPointerMove = (event: PointerEvent) => {
 
@@ -233,6 +235,11 @@ export class DeLoreanDemo extends Demo {
             });
             materialParams.roughness = value;
         });
+
+        this.gui.add(dissolveSettings, "animate").name("Animate").onChange((value: boolean) => {
+            dissolveSettings.animate = value;
+        });
+        this.gui.add(dissolveSettings, "progress", -dissolveSettings.k, dissolveSettings.k, 0.001).name("Progress");
         // console.log(this.materials);
         // console.log(this.model.scene)
 
@@ -272,7 +279,7 @@ export class DeLoreanDemo extends Demo {
     render(dt: number) {
 
         super.render(dt);
-        const t = dt / 2000;
+        // const t = dt / 2000;
         // this.modelContainer.position.y = -0.3;
         // this.modelContainer.position.y = -0.3 + Math.sin(t)/8;
         // this.modelContainer.rotation.z = Math.cos(t)/16;
@@ -284,13 +291,19 @@ export class DeLoreanDemo extends Demo {
         //     // mesh.rotation.x = Math.sin(t) / 2;
         //     // mesh.rotation.z = Math.cos(t) / 2;
         // });
-        this.progress = Math.cos(t) * -20.0;
+        if (dissolveSettings.animate) {
+            this.clockDissolve += 0.005;
+            dissolveSettings.progress = Math.cos(this.clockDissolve) * -dissolveSettings.k;
+        } else {
+            this.clockDissolve = 0.0;
+        }
+        // this.progress = Math.cos(t) * -20.0;
         // console.log(this.progress);
 
-        const opacity = Math.abs((this.progress / 20.0) - 1) / 2;
+        const opacity = Math.abs((dissolveSettings.progress / dissolveSettings.k) - 1) / 2;
 
-        dissolveUniformData.uProgress.value = this.progress;
-        dissolveUniformData.uDissolveThreshold.value = this.progress;
+        dissolveUniformData.uProgress.value = dissolveSettings.progress;
+        dissolveUniformData.uDissolveThreshold.value = dissolveSettings.progress;
 
         // this.particles.forEach(mesh => {
         //     mesh.update(t);
