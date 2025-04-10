@@ -295,7 +295,7 @@ export class DeLoreanDemo extends Demo {
             this.clockDissolve += 0.005;
             dissolveSettings.progress = Math.cos(this.clockDissolve) * -dissolveSettings.k;
         } else {
-            this.clockDissolve = 0.0;
+            if (this.clockDissolve !== 0.0) this.clockDissolve = 0.0;
         }
         // this.progress = Math.cos(t) * -20.0;
         // console.log(this.progress);

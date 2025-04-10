@@ -37,5 +37,5 @@ export const materialParams = {
 export const dissolveSettings = {
     animate: true,
     progress: -20.0,
-    k: 18.0
+    k: 20
 }
