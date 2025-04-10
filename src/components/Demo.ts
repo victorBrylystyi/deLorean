@@ -22,7 +22,7 @@ export class Demo {
 
     composer = new EffectComposer(this.renderer);
     // composer1 = new EffectComposer(this.renderer);
-    bloomPass = new UnrealBloomPass(new Vector2(1024, 768), bloomUniformData.uStrength.value, 0.25, 0.2);
+    bloomPass = new UnrealBloomPass(new Vector2(1024, 768), bloomUniformData.uStrength.value, bloomUniformData.uRadius.value, bloomUniformData.uThreshold.value);
     lutPass = new LUTPass({ intensity: 0.0 });
     lutTexture!: DataTexture | Data3DTexture | null;
 
@@ -84,6 +84,12 @@ export class Demo {
 
         this.gui.add(bloomUniformData.uStrength, "value", 0.0, 10.0, 0.001).name("Bloom Strength").onChange((value: number) => {
             this.bloomPass.strength = value;
+        });
+        this.gui.add(bloomUniformData.uRadius, "value", 0.0, 5.0, 0.001).name("Bloom Radius").onChange((value: number) => {
+            this.bloomPass.radius = value;
+        });
+        this.gui.add(bloomUniformData.uThreshold, "value", 0.0, 1.0, 0.001).name("Bloom Threshold").onChange((value: number) => {
+            this.bloomPass.threshold = value;
         });
     }
 

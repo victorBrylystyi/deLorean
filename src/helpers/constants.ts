@@ -26,12 +26,14 @@ export const dissolveUniformData = {
 };
 
 export const bloomUniformData = {
-    uStrength: new Uniform(1.0)
+    uStrength: new Uniform(1.66),
+    uRadius: new Uniform(0.2),
+    uThreshold: new Uniform(0.2),
 };
 
 export const materialParams = {
     metalness: 0.7,
-    roughness: 0.05,
+    roughness: 0.26,
 };
 
 export const dissolveSettings = {
