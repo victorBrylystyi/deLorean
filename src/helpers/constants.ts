@@ -5,6 +5,9 @@ export const dissolveUniformData = {
     uEdgeColor: {
         value: new Color(0x4d9bff),
     },
+    engineColor: {
+        value: new Color(0xff7b00),
+    },
     uFreq: {
         value: 1.55,
     },
@@ -37,8 +40,14 @@ export const materialParams = {
 };
 
 export const dissolveSettings = {
-    animate: true,
+    animate: false,
     progress: -20.0,
     k: 20,
     kFreg: 0.45
 }
+
+export const particleDataConstants = {
+    particleSpeedFactor: 0.01, // for tweaking velocity 
+    velocityFactor: { x: 0, y: -10 },
+    waveAmplitude: 0,
+};

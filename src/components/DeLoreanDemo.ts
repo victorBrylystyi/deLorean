@@ -1,4 +1,4 @@
-import { CineonToneMapping, Data3DTexture, DataTexture, Group, Mesh, MeshStandardMaterial, PerspectiveCamera, PlaneGeometry, PMREMGenerator, RepeatWrapping, Texture, TextureLoader, Vector2 } from "three";
+import { BoxGeometry, CatmullRomCurve3, CineonToneMapping, Clock, Data3DTexture, DataTexture, Group, Mesh, MeshBasicMaterial, MeshLambertMaterial, MeshStandardMaterial, Object3D, PerspectiveCamera, PlaneGeometry, PMREMGenerator, RepeatWrapping, RGB, Texture, TextureLoader, TubeGeometry, Vector2, Vector3 } from "three";
 import { Demo } from "./Demo";
 import { loadLutTexture } from "./helpers";
 import { GLTF, GLTFLoader, RGBELoader } from "three/examples/jsm/Addons";
@@ -8,6 +8,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { Dissolve } from "./Dissolve";
 import { dissolveSettings, dissolveUniformData, materialParams } from "../helpers/constants";
 import { ParticleMesh } from "./ParticleMesh";
+import { Animation } from "./Animation";
 
 
 const lutPath = '/assets/lut/';
@@ -26,7 +27,7 @@ export class DeLoreanDemo extends Demo {
     camera!: PerspectiveCamera;
 
     container = new Group();
-    modelContainer = new Group();
+    modelContainer = new Object3D();
     controls!: OrbitControls;
 
     envTexture!: Texture;
@@ -36,6 +37,14 @@ export class DeLoreanDemo extends Demo {
     axels: Mesh[] = [];
 
     clockDissolve = 0;
+
+    enableControls = true;
+
+    car!: Mesh;
+    curveMesh!: Mesh;
+    clock = new Clock();
+    t = 0;
+    curve!: CatmullRomCurve3;
 
     onPointerMove = (event: PointerEvent) => {
 
@@ -91,7 +100,7 @@ export class DeLoreanDemo extends Demo {
         await this.initLoad([
             envPath + 'bismarckturm_hillside_1k.hdr',
             lutPath + 'Cinematic-2.cube',
-            modelPath + 'deLorean.glb',
+            modelPath + 'deLorean_C.glb',
             texturePath + 'particle.png'
         ]);
 
@@ -109,6 +118,10 @@ export class DeLoreanDemo extends Demo {
         this.renderer.domElement.addEventListener('pointermove', this.onPointerMove);
         this.renderer.domElement.addEventListener('pointerleave', this.onPointerLeave);
 
+        // this.scene.background = this.envTexture;
+        // this.scene.backgroundBlurriness = 0.7;
+        this.scene.environment = this.envTexture;
+
     }
 
     mountScene() {
@@ -119,12 +132,19 @@ export class DeLoreanDemo extends Demo {
         this.renderer.toneMappingExposure = 1.0;
         
         this.camera = new PerspectiveCamera( 70, aspect, 0.01, 1000 );
-        this.camera.position.set(-2, 2, 2);
 
-        this.controls = new OrbitControls(this.camera, this.canvas);
-        this.controls.enableDamping = true;
-        this.controls.autoRotate = false;
-        this.controls.enabled = true;
+        this.camera.position.set(-5, 0.5, 0);
+        this.camera.lookAt(10, 0, 0);
+        // this.camera.rotation.y = -Math.PI/2;
+
+        if (this.enableControls) {
+
+            this.controls = new OrbitControls(this.camera, this.canvas);
+            this.controls.enableDamping = true;
+            this.controls.autoRotate = false;
+            this.controls.enabled = this.enableControls;
+        }
+
 
         this.postprocessing(this.scene, this.camera);
 
@@ -138,8 +158,6 @@ export class DeLoreanDemo extends Demo {
                 // envMap: this.envTexture,
             })
         );
-        // floor.castShadow = true;
-        // floor.receiveShadow = true;
 
         floor.rotation.x = - Math.PI / 2;
         floor.position.y = -0.26;
@@ -166,7 +184,6 @@ export class DeLoreanDemo extends Demo {
         car.traverse((child) => {
             if (child instanceof Mesh) {
  
-                // const childGeometry = child.geometry;
                 const childMaterial = child.material as MeshStandardMaterial;
 
                 // const newMat = new CustomShaderMaterial({
@@ -205,6 +222,7 @@ export class DeLoreanDemo extends Demo {
                 // });
 
                 const newMat = new Dissolve(childMaterial);
+
                 if (newMat.color.r === 1 && newMat.color.g === 1 && newMat.color.b === 1) {
                     newMat.color.setStyle('#767474');
                     newMat.metalness = materialParams.metalness;
@@ -213,15 +231,73 @@ export class DeLoreanDemo extends Demo {
                 }
                 // newMat.alphaTest = 0.1;
                 newMat.transparent = true;
-
+                if (newMat.name.includes('MTL')) {
+                    console.log('found mtl', newMat.name);
+                    // newMat.emissive.copy(dissolveUniformData.engineColor.value);
+                    this.engineMaterial.push(newMat);
+                }
 
                 child.material = newMat;
 
-                // const particle = new ParticleMesh(this.renderer, childGeometry, this.particleTexture);
-                // this.particles.push(particle);
+                // console.log(child.material);
+
+                const particle = new ParticleMesh(this.renderer, child, this.particleTexture);
+                this.particles.push(particle);
                 // this.scene.add(particle);
             }
         });
+        car.rotation.y = Math.PI/2;
+
+        this.setGui();
+
+        this.modelContainer.add(car);
+        // this.modelContainer.position.set(0, -0.7, 0);
+        // this.modelContainer.rotation.y = Math.PI;
+
+        this.container.add(floor);
+        this.container.add(this.modelContainer);
+
+        this.contactShadow.position.set(0, -0.2, 0);
+        this.scene.add(this.contactShadow);
+
+        this.scene.add(this.container);
+
+        // this.car = new Mesh(new BoxGeometry(1, 1, 2), new MeshStandardMaterial({
+        //     color: 0x00ff00,
+        //     roughness: 0.5,
+        //     metalness: 0.5,
+        //     transparent: true,
+        //     opacity: 0.5,
+        // }));
+        // const y = 0.5
+        // this.car.position.set(0, y, 0);
+        // this.scene.add(this.car);
+
+        // const points = [
+        //     new Vector3(0, 0, 0), 
+        //     new Vector3(20, 0, -10),
+        //     new Vector3(23, 3, 0), 
+        //     new Vector3(20, 2, 0),
+        //     new Vector3(-10, 2, 0),
+        // ];
+
+        // this.curve = new CatmullRomCurve3(points);
+        this.modelContainer.position.set(0, -0.5, 0);
+
+        const animation = new Animation(this.modelContainer, this.camera);
+        const tubeGeometry = new TubeGeometry( animation.curve, 500, 0.1, 12, false );
+        const material = new MeshBasicMaterial( { color: 0xff00ff } );
+		// const wireframeMaterial = new MeshBasicMaterial( { color: 0x000000, opacity: 0.3, wireframe: true, transparent: true } );
+
+        this.curveMesh = new Mesh( tubeGeometry, material );
+        // const wireframe = new Mesh( tubeGeometry, wireframeMaterial );
+        // this.curveMesh.add( wireframe );
+
+        // this.scene.add( this.curveMesh );
+
+    }
+
+    setGui() {
 
         this.gui.add(materialParams, "metalness", 0.0, 1.0, 0.001).name("Metalness").onChange((value: number) => {
             this.materials.forEach(material => {
@@ -242,24 +318,9 @@ export class DeLoreanDemo extends Demo {
         this.gui.add(dissolveSettings, "progress", -dissolveSettings.k, dissolveSettings.k, 0.001).name("Progress");
 
         this.gui.add(dissolveSettings, "kFreg", 0.0, 1.0, 0.001).name("K Freg");
-        // console.log(this.materials);
-        // console.log(this.model.scene)
-
-        // this.model.scene.traverse((child) => {
-        //     if (child instanceof Mesh && child.name.includes('Circle')) {
-        //         this.axels.push(child);
-        //     }
-        // });
-
-        this.modelContainer.add(car);
-
-        this.container.add(floor);
-        this.container.add(this.modelContainer);
-
-        this.contactShadow.position.set(0, -0.25, 0);
-        this.scene.add(this.contactShadow);
-
-        this.scene.add(this.container);
+        this.gui.add(this, "enableControls").name("Controls").onChange((value: boolean) => {
+            this.controls.enabled = value;
+        });
     }
 
     unmount() {
@@ -282,7 +343,7 @@ export class DeLoreanDemo extends Demo {
 
         super.render(dt);
 
-        // const t = dt / 2000;
+        const t = dt / 2000;
         // this.modelContainer.position.y = -0.3;
         // this.modelContainer.position.y = -0.3 + Math.sin(t)/8;
         // this.modelContainer.rotation.z = Math.cos(t)/16;
@@ -297,12 +358,13 @@ export class DeLoreanDemo extends Demo {
         if (dissolveSettings.animate) {
             this.clockDissolve += 0.005;
             const t = this.clockDissolve;
+            // console.log(t);
             dissolveSettings.progress = Math.cos(this.clockDissolve) * -dissolveSettings.k;
-            this.modelContainer.position.y = -0.3;
-            this.modelContainer.position.y = -0.3 + Math.sin(t)/8;
-            this.modelContainer.rotation.z = Math.cos(t)/16;
-            this.modelContainer.rotation.x = Math.sin(t)/20;
-            this.modelContainer.rotation.y = Math.sin(t)/14;
+            // this.modelContainer.position.y = -0.3;
+            // this.modelContainer.position.y = -0.3 + Math.sin(t)/8;
+            // this.modelContainer.rotation.z = Math.cos(t)/16;
+            // this.modelContainer.rotation.x = Math.sin(t)/20;
+            // this.modelContainer.rotation.y = Math.sin(t)/14;
 
             dissolveUniformData.uFreq.value = Math.abs(Math.cos(t * dissolveSettings.kFreg)) * 2.0;
 
@@ -322,16 +384,42 @@ export class DeLoreanDemo extends Demo {
         dissolveUniformData.uProgress.value = dissolveSettings.progress;
         dissolveUniformData.uDissolveThreshold.value = dissolveSettings.progress;
 
-        // this.particles.forEach(mesh => {
-        //     mesh.update(t);
-        // });
+        this.particles.forEach(mesh => {
+            mesh.update(t);
+        });
 
         this.contactShadow.render(opacity);
 
-        this.controls.update();
+        if (this.enableControls) {
+            this.controls.update();
+        }
+
+        // this.t += this.clock.getDelta();
+        // if (this.t > 10) {
+        //     this.t = 0; 
+        // }
+
+        // const t = this.t / 10;
+        // const position = this.curve.getPoint(t); 
+        // this.modelContainer.position.copy(position);
+
+        // const tangent = this.curve.getTangent(t);
+        // const lookAtTarget = new Vector3().addVectors(position, tangent);
+        // this.modelContainer.lookAt(lookAtTarget);
+
+
+
+        // this.particles.forEach(mesh => {
+        // })
+
+        // this.controls.update();
+
+        // this.camera.lookAt(this.modelContainer.position)
 
         // this.scene.background = blackColor;
         this.composer.render();
+
+
         // this.scene.background = this.envTexture;
         // this.composer1.render();
 

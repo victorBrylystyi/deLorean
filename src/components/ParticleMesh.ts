@@ -1,10 +1,11 @@
-import { AdditiveBlending, BufferAttribute, BufferGeometry, Color, Points, ShaderMaterial, Texture, Vector3, WebGLRenderer } from "three";
-import { dissolveUniformData } from "../helpers/constants";
+import { AdditiveBlending, BufferAttribute, BufferGeometry, Color, Mesh, Points, ShaderMaterial, Texture, Vector3, WebGLRenderer } from "three";
+import { dissolveUniformData, particleDataConstants } from "../helpers/constants";
 import snoise from '../lib/noise/snoise.glsl?raw';
 
 
 export class ParticleMesh extends Points {
 
+    mesh: Mesh;
     meshGeometry: BufferGeometry;
 
     particleCount!: number
@@ -15,11 +16,7 @@ export class ParticleMesh extends Points {
     particleDistArr!: Float32Array;
     particleRotationArr!: Float32Array;
 
-    particleData = {
-        particleSpeedFactor: 0.01, // for tweaking velocity 
-        velocityFactor: { x: 3, y: 1 },
-        waveAmplitude: 0,
-    };
+    particleData = particleDataConstants;
 
     particlesUniformData = {
         uTexture: {
@@ -33,17 +30,18 @@ export class ParticleMesh extends Points {
         uAmp: dissolveUniformData.uAmp,
         uFreq: dissolveUniformData.uFreq,
         uBaseSize: {
-            value: 20,
+            value: 15,
         },
         uColor: {
             value: new Color(0x4d9bff),
         }
     }
 
-    constructor(gl: WebGLRenderer, meshGeometry: BufferGeometry, particleTexture: Texture) {
+    constructor(gl: WebGLRenderer, mesh: Mesh, particleTexture: Texture) {
         super();
 
-        this.meshGeometry = meshGeometry;
+        this.meshGeometry = mesh.geometry;
+        this.mesh = mesh;
 
 
         this.particlesUniformData.uTexture.value = particleTexture;
@@ -122,12 +120,17 @@ export class ParticleMesh extends Points {
         this.material.transparent = true;
         this.material.blending = AdditiveBlending;
 
-        this.initParticleAttributes(meshGeometry);
+        this.initParticleAttributes(this.meshGeometry);
 
-        this.geometry = meshGeometry;
+        this.geometry = this.meshGeometry;
+
+        this.mesh.matrixWorld.decompose(this.position, this.quaternion, this.scale);
+        this.updateMatrixWorld();
+        this.updateMatrix();
     }
 
     initParticleAttributes(meshGeo: BufferGeometry) {
+
         this.particleCount = meshGeo.attributes.position.count;
         this.particleMaxOffsetArr = new Float32Array(this.particleCount);
         this.particleInitPosArr = new Float32Array(meshGeo.getAttribute('position').array);
@@ -169,10 +172,8 @@ export class ParticleMesh extends Points {
         let xwave2 = Math.sin(posy * 5) * (0.2 + this.particleData.waveAmplitude);
         let ywave2 = Math.sin(posx * 1) * (0.9 + this.particleData.waveAmplitude);
     
-    
         let xwave3 = Math.sin(posy * 8) * (0.8 + this.particleData.waveAmplitude);
         let ywave3 = Math.sin(posx * 5) * (0.6 + this.particleData.waveAmplitude);
-    
     
         let xwave4 = Math.sin(posy * 3) * (0.8 + this.particleData.waveAmplitude);
         let ywave4 = Math.sin(posx * 7) * (0.6 + this.particleData.waveAmplitude);
@@ -197,7 +198,6 @@ export class ParticleMesh extends Points {
         vx += xwave;
         vy += ywave;
     
-    
         vx *= Math.abs(this.particleData.particleSpeedFactor);
         vy *= Math.abs(this.particleData.particleSpeedFactor);
         vz *= Math.abs(this.particleData.particleSpeedFactor);
@@ -206,6 +206,7 @@ export class ParticleMesh extends Points {
     }
 
     updateParticleAttriutes() {
+
         for (let i = 0; i < this.particleCount; i++) {
             let x = i * 3 + 0;
             let y = i * 3 + 1;
@@ -239,7 +240,8 @@ export class ParticleMesh extends Points {
     }
 
     update(t: number) {
+
         this.updateParticleAttriutes();
-        this.position.set(0, Math.sin(t * 2.0) * 0.5, 0);
+        // this.position.set(0, Math.sin(t * 2.0) * 0.5, 0);
     }
 }

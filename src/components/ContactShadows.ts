@@ -152,12 +152,15 @@ export class ContactShadows extends Object3D {
         const initialBackground = this.scene.background;
         this.scene.background = null;
 
-        if (opacity) (this.plane.material as MeshBasicMaterial).opacity = opacity;
+        if (opacity) {
+            // (this.plane.material as MeshBasicMaterial).opacity = opacity;
+            this.depthMaterial.userData.darkness.value = opacity * 4;
+        }
+        
 
         // force the depthMaterial to everything
         // cameraHelper.visible = false;
         this.scene.overrideMaterial = this.depthMaterial;
-
         // set renderer clear alpha
         const initialClearAlpha = this.renderer.getClearAlpha();
         this.renderer.setClearAlpha( 0 );
