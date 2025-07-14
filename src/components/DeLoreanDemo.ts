@@ -38,7 +38,7 @@ export class DeLoreanDemo extends Demo {
 
     clockDissolve = 0;
 
-    enableControls = true;
+    enableControls = false;
 
     car!: Mesh;
     curveMesh!: Mesh;
