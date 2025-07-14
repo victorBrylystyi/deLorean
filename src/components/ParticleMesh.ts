@@ -242,6 +242,6 @@ export class ParticleMesh extends Points {
     update(t: number) {
 
         this.updateParticleAttriutes();
-        // this.position.set(0, Math.sin(t * 2.0) * 0.5, 0);
+        this.position.set(0, Math.sin(t * 2.0) * 0.5, 0);
     }
 }
