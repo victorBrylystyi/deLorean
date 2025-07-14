@@ -1,4 +1,4 @@
-import { BoxGeometry, CatmullRomCurve3, CineonToneMapping, Clock, Data3DTexture, DataTexture, Group, Mesh, MeshBasicMaterial, MeshLambertMaterial, MeshStandardMaterial, Object3D, PerspectiveCamera, PlaneGeometry, PMREMGenerator, RepeatWrapping, RGB, Texture, TextureLoader, TubeGeometry, Vector2, Vector3 } from "three";
+import { CatmullRomCurve3, CineonToneMapping, Clock, Data3DTexture, DataTexture, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, PerspectiveCamera, PlaneGeometry, PMREMGenerator, RepeatWrapping, Texture, TextureLoader, TubeGeometry, Vector2 } from "three";
 import { Demo } from "./Demo";
 import { loadLutTexture } from "./helpers";
 import { GLTF, GLTFLoader, RGBELoader } from "three/examples/jsm/Addons";
