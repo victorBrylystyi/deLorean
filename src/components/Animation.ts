@@ -1,7 +1,8 @@
 import { gsap } from 'gsap';
-import { CatmullRomCurve3, Color, Mesh, Object3D, PerspectiveCamera, Vector3 } from 'three';
+import { CatmullRomCurve3, Color, Mesh, Object3D, PerspectiveCamera, Quaternion, Vector3 } from 'three';
 import { dissolveSettings, dissolveUniformData } from '../helpers/constants';
 import { Dissolve } from './Dissolve';
+import { CustomEase } from 'gsap/all';
 
 const yStart = 0;
 const startColor = new Color(0, 0, 0);
@@ -40,38 +41,59 @@ export class Animation {
   //   new Vector3(-15, yStart + 3, 0),   // Final departure (maintains height)
   // ];
 
-  points = [
-    // --- Phase 1: Initial forward movement ---
-    new Vector3(0, yStart, 0),   // Start
-    new Vector3(2, yStart, 0),   // Slightly forward
-    new Vector3(10, yStart, -1), // Added: More gentle lead-in to the curve
+  // points = [
+  //   // --- Phase 1: Initial forward movement ---
+  //   new Vector3(0, yStart, 0),   // Start
+  //   new Vector3(2, yStart, 0),   // Slightly forward
+  //   new Vector3(10, yStart, -1), // Added: More gentle lead-in to the curve
 
-    // --- Phase 2: Ascent and curve (making it rounder) ---
-    // Goal: Ascend and turn "left" (negative Z)
+  //   // --- Phase 2: Ascent and curve (making it rounder) ---
+  //   // Goal: Ascend and turn "left" (negative Z)
 
-    // Point where ascent and turn begin
-    new Vector3(15, yStart, -2),  // Car begins to shift slightly left before ascending
+  //   // Point where ascent and turn begin
+  //   new Vector3(15, yStart, -2),  // Car begins to shift slightly left before ascending
 
-    // Points to form a round arc upwards and to the left
-    new Vector3(18, yStart + 1.5, -5), // Active ascent and turn
-    new Vector3(20, yStart + 2.5, -6.5), // Added: Intermediate point for smoother peak
-    new Vector3(21, yStart + 3, -7),   // Peak of ascent and maximum left shift
+  //   // Points to form a round arc upwards and to the left
+  //   new Vector3(18, yStart + 1.5, -5), // Active ascent and turn
+  //   new Vector3(20, yStart + 2.5, -6.5), // Added: Intermediate point for smoother peak
+  //   new Vector3(21, yStart + 3, -7),   // Peak of ascent and maximum left shift
 
-    // --- Phase 3: Transition to forward-down movement (start of flyover/descent) ---
-    // Goal: Car levels out in height and direction, preparing for descent/flyover
-    new Vector3(23, yStart + 3, -5),   // Exiting peak of ascent, Z-offset decreases
-    new Vector3(24, yStart + 2.5, -2), // Added: Smoother transition out of peak
-    new Vector3(25, yStart + 2, 0),    // Car levels out on Z, begins a slight descent
+  //   // --- Phase 3: Transition to forward-down movement (start of flyover/descent) ---
+  //   // Goal: Car levels out in height and direction, preparing for descent/flyover
+  //   new Vector3(23, yStart + 3, -5),   // Exiting peak of ascent, Z-offset decreases
+  //   new Vector3(24, yStart + 2.5, -2), // Added: Smoother transition out of peak
+  //   new Vector3(25, yStart + 2, 0),    // Car levels out on Z, begins a slight descent
 
-    // --- Phase 4: Flyover/further descent and departure ---
-    // Goal: Fly past the "camera" and depart
+  //   // --- Phase 4: Flyover/further descent and departure ---
+  //   // Goal: Fly past the "camera" and depart
+
+  //   new Vector3(15, yStart + 0.5, 0),  // Flyby, slightly lower than the previous point
+  //   new Vector3(5, yStart + 0.8, 0),   // Added: Smoother lead-in to final departure
+  //   new Vector3(-4, yStart + 1, 0),    // Departure, lifts slightly for smoothness
+  //   new Vector3(-8, yStart + 3, 0),    // Final departure (maintains height)
+  //   new Vector3(-15, yStart + 3, 0),   // Final departure (maintains height)
+  // ];
+
+points = [
+    new Vector3(0, yStart, 0),     
+    new Vector3(5, yStart, 0),       
+
+    new Vector3(10, yStart, -2), 
+    new Vector3(20, yStart, -4),   
+
+    new Vector3(21, yStart + 1, -3),   
+    new Vector3(22, yStart + 2, -2),   
+    new Vector3(23, yStart + 3, -1),    
+    new Vector3(24, yStart + 4, 0),
+
 
     new Vector3(15, yStart + 0.5, 0),  // Flyby, slightly lower than the previous point
-    new Vector3(5, yStart + 0.8, 0),   // Added: Smoother lead-in to final departure
+    // new Vector3(5, yStart + 0.8, 0),   // Added: Smoother lead-in to final departure
     new Vector3(-4, yStart + 1, 0),    // Departure, lifts slightly for smoothness
     new Vector3(-8, yStart + 3, 0),    // Final departure (maintains height)
-    new Vector3(-15, yStart + 3, 0),   // Final departure (maintains height)
+    new Vector3(-15, yStart + 4, 0),   // Final departure (maintains height)
 ];
+
   curve: CatmullRomCurve3;
   step = {
     x: 0,
@@ -84,12 +106,17 @@ export class Animation {
   constructor(car: Object3D, camera: PerspectiveCamera) {
     this.car = car;
     this.camera = camera;
+    gsap.registerPlugin(CustomEase);
+CustomEase.create("myPathSpeedAccelerated", "M0,0 L0.2,0.2 C0.3,0.3 0.6,0.98 0.8,0.95 L1,1");
     this.timeline = gsap.timeline({ repeat: -1, defaults: {
-      ease: "power2.inOut",
+      // ease: "sine.out",
+// ease: "expoScale(0.5,7,power2.out)",
+    ease: "power2.inOut",
       yoyo: true 
     }});
     this.curve = new CatmullRomCurve3(this.points);
-    this.curve.tension = 1.0;
+    console.log(this.curve);
+    this.curve.tension = 0.7;
     this.car.traverse((obj) => {
       if (obj instanceof Mesh) {
         const mat = obj.material;
@@ -131,20 +158,29 @@ export class Animation {
       }, 
     },  1);
 
-    this.timeline.to(this.step, {x: 10, duration: 10, 
+    this.timeline.to(this.step, {x: 1, duration: 8, 
       onUpdate: () => {
-        const t = this.step.x / 10; // Normalize t to the range [0, 1]
+        const t = this.step.x; 
 
         const position = this.curve.getPoint(t); 
         this.car.position.copy(position);
 
-        const tangent = this.curve.getTangent(t);
-        const lookAtTarget = new Vector3().addVectors(position, tangent);
-        this.car.lookAt(lookAtTarget);
+        // const tangent = this.curve.getTangent(t);
+        // const lookAtTarget = new Vector3().addVectors(position, tangent);
+        // this.car.lookAt(lookAtTarget);
+        
+        const tangent = this.curve.getTangent(t).normalize();
+        const targetQuaternion = new Quaternion();
+        targetQuaternion.setFromUnitVectors(new Vector3(0, 0, 1), tangent); 
+        // If car rotation order is YXZ, you can use:
+        // const m = new THREE.Matrix4().lookAt(position, position.clone().add(tangent), up);
+        // targetQuaternion.setFromRotationMatrix(m);
+
+        this.car.quaternion.slerp(targetQuaternion, 0.2);
       }
     }, 1);
 
-    this.timeline.to(this.step, {y: 2.5, duration: 5, 
+    this.timeline.to(this.step, {y: 2.5, duration: 4, 
       onUpdate: () => {
         const t = this.step.y;
         const progress = Math.cos(t) * -dissolveSettings.k;
@@ -157,10 +193,10 @@ export class Animation {
             mat.emissive.setRGB(0, 0, 0);
           }); 
       }
-    }, 5);
+    }, 4);
 
 
-    this.timeline.to(this.camera.position, { y: 2.2, duration: 10 }, 0);
+    this.timeline.to(this.camera.position, { y: 2.2, duration: 8 }, 0);
 
   }
 };

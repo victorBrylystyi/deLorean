@@ -38,12 +38,13 @@ export class DeLoreanDemo extends Demo {
 
     clockDissolve = 0;
 
-    enableControls = false;
+    enableControls = true;
 
     car!: Mesh;
     curveMesh!: Mesh;
     clock = new Clock();
     t = 0;
+    visibleCurve = false;
     curve!: CatmullRomCurve3;
 
     onPointerMove = (event: PointerEvent) => {
@@ -290,10 +291,11 @@ export class DeLoreanDemo extends Demo {
 		// const wireframeMaterial = new MeshBasicMaterial( { color: 0x000000, opacity: 0.3, wireframe: true, transparent: true } );
 
         this.curveMesh = new Mesh( tubeGeometry, material );
+        this.curveMesh.visible = this.visibleCurve;
         // const wireframe = new Mesh( tubeGeometry, wireframeMaterial );
         // this.curveMesh.add( wireframe );
 
-        // this.scene.add( this.curveMesh );
+        this.scene.add( this.curveMesh );
 
     }
 
@@ -320,6 +322,11 @@ export class DeLoreanDemo extends Demo {
         this.gui.add(dissolveSettings, "kFreg", 0.0, 1.0, 0.001).name("K Freg");
         this.gui.add(this, "enableControls").name("Controls").onChange((value: boolean) => {
             this.controls.enabled = value;
+        });
+        this.gui.add(this, "visibleCurve").name("Curve Visibility").onChange((value: boolean) => {
+            if (this.curveMesh) {
+                this.curveMesh.visible = value;
+            }
         });
     }
 
