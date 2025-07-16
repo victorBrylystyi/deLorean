@@ -38,13 +38,13 @@ export class DeLoreanDemo extends Demo {
 
     clockDissolve = 0;
 
-    enableControls = true;
+    enableControls = false;
 
     car!: Mesh;
     curveMesh!: Line;
     clock = new Clock();
     t = 0;
-    visibleCurve = false;
+    visibleCurve = true;
     curve!: CatmullRomCurve3;
 
     onPointerMove = (event: PointerEvent) => {
@@ -134,7 +134,8 @@ export class DeLoreanDemo extends Demo {
         
         this.camera = new PerspectiveCamera( 70, aspect, 0.01, 1000 );
 
-        this.camera.position.set(-9, 0.5, -2);
+        // this.camera.position.set(-9, 0.5, -2);
+        this.camera.position.set(-5, 0.5, 0);
         this.camera.lookAt(10, 0, 0);
         // this.camera.rotation.y = -Math.PI/2;
 

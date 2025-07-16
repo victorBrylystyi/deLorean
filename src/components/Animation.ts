@@ -179,6 +179,8 @@ bezierSegments: QuadraticBezierCurve3[] = [];
 // const segment2_end = new Vector3(15, yStart + 2, -6); // Максимальный подъем и сдвиг влево
 // this.bezierSegments.push(new QuadraticBezierCurve3(segment2_start, segment2_control, segment2_end));
 
+/*
+
 // --- Сегмент 1: Начальный разгон по прямой ---
 const segment1_start = new Vector3(0, yStart, 0); 
 const segment1_end = new Vector3(8, yStart, 0); // <-- Точка P
@@ -255,7 +257,7 @@ const segment5_control = new Vector3(
 
 const segment5_end = new Vector3(-20, yStart + 6, 0); 
 this.bezierSegments.push(new QuadraticBezierCurve3(segment5_start, segment5_control, segment5_end));
-
+*/
 
 // // --- Сегмент 1: Начальный разгон по прямой (или с очень плавным входом в поворот) ---
 // // Мы зададим startPoint и endPoint для первого сегмента.
@@ -322,6 +324,30 @@ this.bezierSegments.push(new QuadraticBezierCurve3(segment5_start, segment5_cont
 
 // const segment5_end = new Vector3(-20, yStart + 6, 0); 
 // this.bezierSegments.push(new QuadraticBezierCurve3(segment5_start, segment5_control, segment5_end));
+
+const segment1_start = new Vector3(0, yStart, 0);
+const segment1_control = new Vector3(6.5, yStart, 0.1);
+const segment1_end = new Vector3(8, yStart, -0.5);
+this.bezierSegments.push(new QuadraticBezierCurve3(segment1_start, segment1_control, segment1_end));
+const segment2_start = segment1_end; 
+const segment2_control = new Vector3(23, yStart + 1, -4.5)
+const segment2_end = new Vector3(25, yStart + 2, -3);
+this.bezierSegments.push(new QuadraticBezierCurve3(segment2_start, segment2_control, segment2_end));
+const segment3_start = segment2_end; 
+const segment3_control = new Vector3(27, yStart + 2.4, -2.5); // Корректировка для плавности и формы дуги
+const segment3_end = new Vector3(22, yStart + 3, 0.2);
+this.bezierSegments.push(new QuadraticBezierCurve3(segment3_start, segment3_control, segment3_end));
+
+const segment4_start = segment3_end; 
+const segment4_control = new Vector3(20, yStart + 1.5, -0.1); // Тянем кривую вниз, сохраняя Z=0
+const segment4_end = new Vector3(0, yStart + 1, 0); // Пролет над начальной точкой (X=0)
+this.bezierSegments.push(new QuadraticBezierCurve3(segment4_start, segment4_control, segment4_end));
+const segment5_start = segment4_end; 
+const segment5_control = new Vector3(-3, yStart + 0.5, 0.1); // Тянем вверх и "назад" по X
+const segment5_end = new Vector3(-20, yStart + 4, 0); // Окончательное удаление
+this.bezierSegments.push(new QuadraticBezierCurve3(segment5_start, segment5_control, segment5_end));
+
+
 
 
 this.path = new CurvePath();
@@ -430,13 +456,13 @@ this.bezierSegments.forEach(segment => {
         // Чем ближе к 0, тем медленнее и плавнее вращение (большая инерция).
         // Чем ближе к 1, тем быстрее и менее плавно вращение (почти как моментальный lookAt).
         // Вам нужно будет подобрать это значение.
-        this.car.quaternion.slerp(targetQuaternion, 0.09); // <-- Настраиваемый параметр плавности
+        this.car.quaternion.slerp(targetQuaternion, 0.07); // <-- Настраиваемый параметр плавности
                                                             // Обычно это значение должно быть небольшим
                                                             // (0.05 - 0.2) для плавности.
       }
     }, 1);
 
-    this.timeline.to(this.step, {y: 2.5, duration: 4, 
+    this.timeline.to(this.step, {y: 2.5, duration: 3.5, 
       onUpdate: () => {
         const t = this.step.y;
         const progress = Math.cos(t) * -dissolveSettings.k;
@@ -449,10 +475,10 @@ this.bezierSegments.forEach(segment => {
             mat.emissive.setRGB(0, 0, 0);
           }); 
       }
-    }, 3);
+    }, 4);
 
 
-    this.timeline.to(this.camera.position, { y: 2.2, duration: 8 }, 0);
+    this.timeline.to(this.camera.position, { y: 2.5, duration: 9 }, 0);
 
   }
 };
