@@ -326,7 +326,7 @@ this.bezierSegments.push(new QuadraticBezierCurve3(segment5_start, segment5_cont
 // this.bezierSegments.push(new QuadraticBezierCurve3(segment5_start, segment5_control, segment5_end));
 
 const segment1_start = new Vector3(0, yStart, 0);
-const segment1_control = new Vector3(6.5, yStart, 0.1);
+const segment1_control = new Vector3(6.5, yStart-0.1, 0);
 const segment1_end = new Vector3(8, yStart, -0.5);
 this.bezierSegments.push(new QuadraticBezierCurve3(segment1_start, segment1_control, segment1_end));
 const segment2_start = segment1_end; 
@@ -339,11 +339,11 @@ const segment3_end = new Vector3(22, yStart + 3, 0.2);
 this.bezierSegments.push(new QuadraticBezierCurve3(segment3_start, segment3_control, segment3_end));
 
 const segment4_start = segment3_end; 
-const segment4_control = new Vector3(20, yStart + 1.5, -0.1); // Тянем кривую вниз, сохраняя Z=0
+const segment4_control = new Vector3(10, yStart - 1, -0.1); // Тянем кривую вниз, сохраняя Z=0
 const segment4_end = new Vector3(0, yStart + 1, 0); // Пролет над начальной точкой (X=0)
 this.bezierSegments.push(new QuadraticBezierCurve3(segment4_start, segment4_control, segment4_end));
 const segment5_start = segment4_end; 
-const segment5_control = new Vector3(-3, yStart + 0.5, 0.1); // Тянем вверх и "назад" по X
+const segment5_control = new Vector3(-3, yStart + 1.5, 0.1); // Тянем вверх и "назад" по X
 const segment5_end = new Vector3(-20, yStart + 4, 0); // Окончательное удаление
 this.bezierSegments.push(new QuadraticBezierCurve3(segment5_start, segment5_control, segment5_end));
 
@@ -402,14 +402,14 @@ this.bezierSegments.forEach(segment => {
 
     this.timeline.to(this.step, {x: 1, duration: 8, 
       onUpdate: () => {
-        // const t = this.step.x; 
+        const t = this.step.x; 
 
         // const position = this.curve.getPoint(t); 
         // this.car.position.copy(position);
 
-        // // const tangent = this.curve.getTangent(t);
-        // // const lookAtTarget = new Vector3().addVectors(position, tangent);
-        // // this.car.lookAt(lookAtTarget);
+        // const tangent = this.curve.getTangent(t);
+        // const lookAtTarget = new Vector3().addVectors(position, tangent);
+        // this.car.lookAt(lookAtTarget);
         
         // const tangent = this.curve.getTangent(t).normalize();
         // const targetQuaternion = new Quaternion();
@@ -420,47 +420,62 @@ this.bezierSegments.forEach(segment => {
 
         // this.car.quaternion.slerp(targetQuaternion, 0.2);
 
-        const t = this.step.x; // t от 0 до 1
         const position = this.path.getPoint(t); 
         this.car.position.copy(position);
+        const bias = 0.07;
 
-        // const tangent = this.path.getTangent(t);
+        const timeRotation = t + bias < 1 ? t + bias : 1; // Prevents out of bounds error
+
+        // const tangent = this.path.getTangent(timeRotation);
         // const lookAtTarget = new Vector3().addVectors(position, tangent);
         // this.car.lookAt(lookAtTarget);
 
-        // --- Вращение с использованием slerp ---
-        // 1. Получаем касательную (tangent) в текущей точке пути.
-        const tangent = this.path.getTangent(t);
+        let tangent: Vector3 = new Vector3();
 
-        // 2. Создаем матрицу ориентации, "смотрящую" вдоль касательной.
-        // Используем вспомогательный вектор "вверх", чтобы правильно ориентировать объект.
-        // Это более надежный способ, чем просто lookAt(position + tangent),
-        // так как он учитывает "крены" объекта.
-        // const m = new Matrix4();
-        // m.lookAt(position, position.clone().add(tangent), this._upVector); 
-        // Или, чтобы объект всегда смотрел "вперед" относительно своего локального X, 
-        // а не глобального X, используем setFromMatrixAndQuaternion или что-то подобное.
-        // Проще всего использовать lookAt, но с пониманием ее поведения.
+        if (t > 0.22 && t < 0.42) {
+          tangent.copy(this.path.getTangent(timeRotation));
+        } else {
+          tangent.copy(this.path.getTangent(t));
+        }
 
-        // Для корректной ориентации объекта вдоль пути, 
-        // можно использовать временный объект и его lookAt, а потом slerp его кватернион
+
+
         const tempObject = new Object3D();
         tempObject.position.copy(position); // Установите временный объект в ту же позицию
         tempObject.lookAt(position.clone().add(tangent)); // Заставьте его смотреть вдоль касательной
         
-        // 3. Целевой кватернион - это кватернион временного объекта
         const targetQuaternion = tempObject.quaternion;
 
-        // 4. Плавно интерполируем текущий кватернион автомобиля к целевому.
-        // Фактор slerp (например, 0.1) определяет "скорость" вращения.
-        // Чем ближе к 0, тем медленнее и плавнее вращение (большая инерция).
-        // Чем ближе к 1, тем быстрее и менее плавно вращение (почти как моментальный lookAt).
-        // Вам нужно будет подобрать это значение.
-        this.car.quaternion.slerp(targetQuaternion, 0.07); // <-- Настраиваемый параметр плавности
+
+
+        this.car.quaternion.slerp(targetQuaternion, 0.06); // <-- Настраиваемый параметр плавности
                                                             // Обычно это значение должно быть небольшим
                                                             // (0.05 - 0.2) для плавности.
       }
     }, 1);
+
+    // this.timeline.to(this.step, {x: 1, duration: 8, 
+    //   onUpdate: () => {
+    //     const t = this.step.x; 
+
+    //     const position = this.path.getPoint(t); 
+
+    //     const bias = 0.1;
+    //     const timeRotation = t + bias < 1 ? t + bias : 1; // Prevents out of bounds error
+
+    //     const tangent = this.path.getTangent(timeRotation);
+
+    //     const tempObject = new Object3D();
+    //     tempObject.position.copy(position); // Установите временный объект в ту же позицию
+    //     tempObject.lookAt(position.clone().add(tangent)); // Заставьте его смотреть вдоль касательной
+        
+    //     const targetQuaternion = tempObject.quaternion;
+
+    //     this.car.quaternion.slerp(targetQuaternion, 0.06); // <-- Настраиваемый параметр плавности
+    //                                                         // Обычно это значение должно быть небольшим
+    //                                                         // (0.05 - 0.2) для плавности.
+    //   }
+    // }, 1);
 
     this.timeline.to(this.step, {y: 2.5, duration: 3.5, 
       onUpdate: () => {
@@ -478,7 +493,7 @@ this.bezierSegments.forEach(segment => {
     }, 4);
 
 
-    this.timeline.to(this.camera.position, { y: 2.5, duration: 9 }, 0);
+    this.timeline.to(this.camera.position, { y: 3.5, duration: 9 }, 0);
 
   }
 };
