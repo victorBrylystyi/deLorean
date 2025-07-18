@@ -183,7 +183,6 @@ const segment5_control = new Vector3(
     segment5_start.z - 0.3  // Держим близко к оси Z=0, если цель - прямое удаление
 );
 
-console.log(`segment5_control: ${segment5_control.toArray()}`);
 // Ваш оригинальный segment5_control = new Vector3(-3, yStart + 1.5, 0.1); был очень близок к этому.
 
 const segment5_end = new Vector3(3, yStart, 0); // End of Segment 5
@@ -210,14 +209,14 @@ const segment6_start = segment5_end; // (0, 1, 0)
 //     baseControl5.z + 1.2 // Небольшое смещение по Z, если нужно для формы
 // );
 const segment6_control = new Vector3(
-    segment6_start.x - 3,   // Тянем назад по X, но не слишком далеко
-    segment6_start.y - 0.1, // Тянем вверх, чтобы сформировать плавный подъем
+    segment6_start.x - 3.5,   // Тянем назад по X, но не слишком далеко
+    segment6_start.y, // Тянем вверх, чтобы сформировать плавный подъем
     segment6_start.z  // Держим близко к оси Z=0, если цель - прямое удаление
 );
 
 // Ваш оригинальный segment5_control = new Vector3(-3, yStart + 1.5, 0.1); был очень близок к этому.
 
-const segment6_end = new Vector3(-15, yStart+ 3, 0); // End of Segment 5
+const segment6_end = new Vector3(-15, yStart + 3, 0); // End of Segment 5
 this.bezierSegments.push(new QuadraticBezierCurve3(segment6_start, segment6_control, segment6_end));
 
 
