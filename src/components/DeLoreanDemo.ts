@@ -38,7 +38,7 @@ export class DeLoreanDemo extends Demo {
 
     clockDissolve = 0;
 
-    enableControls = false;
+    enableControls = true;
 
     car!: Mesh;
     curveMesh!: Line;
@@ -135,7 +135,7 @@ export class DeLoreanDemo extends Demo {
         this.camera = new PerspectiveCamera( 70, aspect, 0.01, 1000 );
 
         // this.camera.position.set(-9, 0.5, -2);
-        this.camera.position.set(-5, 0.5, 0);
+        this.camera.position.set(-7, 0.5, 0);
         this.camera.lookAt(10, 0, 0);
         // this.camera.rotation.y = -Math.PI/2;
 
@@ -285,7 +285,7 @@ export class DeLoreanDemo extends Demo {
 
         // this.curve = new CatmullRomCurve3(points);
         this.modelContainer.position.set(0, -0.5, 0);
-
+        // this.modelContainer.visible = false;
         const animation = new Animation(this.modelContainer, this.camera);
         // const tubeGeometry = new TubeGeometry( animation.curve, 500, 0.1, 12, false );
         // const material = new MeshBasicMaterial( { color: 0xff00ff } );

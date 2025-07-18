@@ -1,5 +1,5 @@
 import { gsap } from 'gsap';
-import { Color, CurvePath, Mesh, Object3D, PerspectiveCamera, QuadraticBezierCurve3, Vector3 } from 'three';
+import { Color, CubicBezierCurve3, CurvePath, Mesh, Object3D, PerspectiveCamera, QuadraticBezierCurve3, Vector3 } from 'three';
 import { dissolveSettings, dissolveUniformData } from '../helpers/constants';
 import { Dissolve } from './Dissolve';
 
@@ -31,7 +31,7 @@ export class Animation {
 //     new Vector3(-15, yStart + 4, 0),   // Final departure (maintains height)
 // ];
 
-  public bezierSegments: QuadraticBezierCurve3[] = [];
+  public bezierSegments: (CubicBezierCurve3 | QuadraticBezierCurve3)[] = [];
   public path!: CurvePath<Vector3>;
 
   private step = {
@@ -52,30 +52,198 @@ export class Animation {
       yoyo: true 
     }});
 
+
+    
     const segment1_start = new Vector3(0, yStart, 0);
     const segment1_control = new Vector3(6.5, yStart-0.1, 0);
     const segment1_end = new Vector3(8, yStart, -0.5);
     this.bezierSegments.push(new QuadraticBezierCurve3(segment1_start, segment1_control, segment1_end)); // linear segment
 
-    const segment2_start = segment1_end; 
-    const segment2_control = new Vector3(23, yStart + 1, -4.5)
-    const segment2_end = new Vector3(25, yStart + 2, -3);
-    this.bezierSegments.push(new QuadraticBezierCurve3(segment2_start, segment2_control, segment2_end));
+    // const segment2_start = segment1_end; 
+    // const segment2_control = new Vector3(23, yStart + 1, -4.5)
+    // const segment2_end = new Vector3(25, yStart + 2, -3);
+    // this.bezierSegments.push(new QuadraticBezierCurve3(segment2_start, segment2_control, segment2_end));
 
-    const segment3_start = segment2_end; 
-    const segment3_control = new Vector3(27, yStart + 2.4, -2.5); 
-    const segment3_end = new Vector3(22, yStart + 3, 0.2);
-    this.bezierSegments.push(new QuadraticBezierCurve3(segment3_start, segment3_control, segment3_end));
+    // --- Segment 2: Ascent and first curve ---
+const segment2_start = segment1_end; // (8, 0, -0.5)
 
-    const segment4_start = segment3_end; 
-    const segment4_control = new Vector3(10, yStart - 1, -0.1); 
-    const segment4_end = new Vector3(0, yStart + 1, 0); 
-    this.bezierSegments.push(new QuadraticBezierCurve3(segment4_start, segment4_control, segment4_end));
+// Ensure G1 continuity for segment2_control relative to segment1_control and segment1_end
+// C2 = P + (P - C1) where P is segment2_start, C1 is segment1_control
+const baseControl2 = segment2_start.clone().add(segment2_start.clone().sub(segment1_control));
 
-    const segment5_start = segment4_end; 
-    const segment5_control = new Vector3(-3, yStart + 1.5, 0.1); 
-    const segment5_end = new Vector3(-20, yStart + 4, 0);
-    this.bezierSegments.push(new QuadraticBezierCurve3(segment5_start, segment5_control, segment5_end));
+// Adjust segment2_control for the desired curve shape (ascent and turn)
+const segment2_control = new Vector3(
+    baseControl2.x + 12,  // Pull it forward for a longer initial curve
+    yStart + 1.6,         // Active ascent
+    baseControl2.z - 4    // Active turn left (negative Z)
+);
+// The original (23, yStart + 1, -4.5) might have been close after calculation.
+// Let's use it as a guide if the calculated one is too far:
+// If you want to stick closer to your original intent while maintaining G1,
+// then the calculated baseControl2 must guide how you *adjust* segment2_control.
+// For example, if you want (23, yStart + 1, -4.5) to be the *actual* control point:
+// const segment2_control = new Vector3(23, yStart + 1, -4.5);
+// Then you'd need to ensure segment1_control is set correctly for continuity.
+// For now, let's stick to generating it based on G1 for smooth transition.
+
+const segment2_end = new Vector3(25, yStart + 2, -3); // End of Segment 2 / Start of Segment 3
+this.bezierSegments.push(new QuadraticBezierCurve3(segment2_start, segment2_control, segment2_end));
+
+    // const segment3_start = segment2_end; 
+    // const segment3_control = new Vector3(27, yStart + 2.5, -2.5); 
+    // const segment3_end = new Vector3(24, yStart + 3, 1);
+    // this.bezierSegments.push(new QuadraticBezierCurve3(segment3_start, segment3_control, segment3_end));
+
+    // const segment4_start = segment3_end; 
+    // const segment4_control = new Vector3(10, yStart + 2, 3); 
+    // const segment4_end = new Vector3(0, yStart + 1, 0); 
+    // this.bezierSegments.push(new QuadraticBezierCurve3(segment4_start, segment4_control, segment4_end));
+
+    // --- Segment 3: Continuation of arc and leveling out (Focus: Smooth this segment!) ---
+// const segment3_start = segment2_end; // (25, 2, -3)
+
+// // **CALCULATE segment3_control for G1 continuity from segment2_end:**
+// // C3 = P + (P - C2) where P is segment3_start, C2 is segment2_control
+// const baseControl3 = segment3_start.clone().add(segment3_start.clone().sub(segment2_control));
+
+// // **ADJUST segment3_control for desired arc shape and leveling out:**
+// // We want the curve to continue rising, but start returning on Z (from -3 towards +1)
+// // and flow smoothly towards segment3_end.
+// const segment3_control = new Vector3(
+//     baseControl3.x + 1,      // Use base X for continuity
+//     baseControl3.y + 0.1, // Add a bit of vertical pull for the arc (e.g., +0.5)
+//     baseControl3.z  // Pull Z towards positive to bring it back (e.g., +2.5)
+// );
+// // Example calculated base: (25 + (25-21.5), 2 + (2-1), -3 + (-3 - (-4.5))) = (28.5, 3, -1.5)
+// // Example final adjusted: (28.5, 3.5, 1) - This makes it smoother and directs the curve.
+
+// const segment3_end = new Vector3(24, yStart + 3, 1); // End of Segment 3 / Start of Segment 4
+// this.bezierSegments.push(new QuadraticBezierCurve3(segment3_start, segment3_control, segment3_end));
+
+const segment3_start = segment2_end; // (25, 2, -3)
+const segment3_control1 = new Vector3(28, yStart + 2.3, -0.5); // Adjusted control point for smoother arc
+const segment3_end = new Vector3(24, yStart + 2, 0.2); // End of Segment
+this.bezierSegments.push(new QuadraticBezierCurve3(segment3_start, segment3_control1, segment3_end));
+
+// --- Segment 4: Flyover and descent (Focus: Smooth this segment!) ---
+const segment4_start = segment3_end; // (24, 3, 1)
+
+// **CALCULATE segment4_control for G1 continuity from segment3_end:**
+// C4 = P + (P - C3) where P is segment4_start, C3 is segment3_control
+// const baseControl4 = segment4_start.clone().add(segment4_start.clone().sub(segment3_control1));
+
+// **ADJUST segment4_control for desired flyover shape and descent:**
+// We want the curve to go towards the camera (X=0, Z=0) while descending.
+const segment4_control = new Vector3(
+    // baseControl4.x - 1,  // Pull X back significantly to bring it towards the camera
+    // baseControl4.y + 0, // Pull Y down for descent
+    // baseControl4.z + 1.0   // Pull Z towards 0
+    19.5,
+    yStart + 1.5,
+    0.5 + 0.2
+);
+
+// Example calculated base: (24 + (24-28.5), 3 + (3-3.5), 1 + (1-1)) = (19.5, 2.5, 1)
+// Example final adjusted: (9.5, 1.0, 0)
+
+const segment4_end = new Vector3(15, yStart + 1, 0); // End of Segment 4
+this.bezierSegments.push(new QuadraticBezierCurve3(segment4_start, segment4_control, segment4_end));
+
+    // const segment4_start = segment3_end; 
+    // const segment4_control = new Vector3(27, yStart + 2.4, 2.5); 
+    // const segment4_end = new Vector3(25, yStart + 2, 3);
+    // this.bezierSegments.push(new QuadraticBezierCurve3(segment4_start, segment4_control, segment4_end));
+
+    // const segment5_start = segment4_end; 
+    // const segment5_control = new Vector3(-3, yStart + 1.5, 0.1); 
+    // const segment5_end = new Vector3(-20, yStart + 4, 0);
+    // --- Segment 5: Final ascent "into camera" and departure (Focus: Smooth this segment!) ---
+const segment5_start = segment4_end; // (0, 1, 0)
+
+// **КЛЮЧЕВОЙ РАСЧЕТ ДЛЯ G1-НЕПРЕРЫВНОСТИ НА СТЫКЕ SEGMENT 4 И SEGMENT 5:**
+// C5 = P + (P - C4), где P = segment5_start, C4 = segment4_control
+// const baseControl5 = segment5_start.clone().add(segment5_start.clone().sub(segment4_control));
+
+// **КОРРЕКТИРУЕМ segment5_control для желаемого финального подъема и удаления:**
+// Начинаем с baseControl5 для плавности, затем смещаем для формы.
+// const segment5_control = new Vector3(
+//     baseControl5.x + 16, // Тянем X назад (в отрицательное направление) для движения "в камеру"
+//     baseControl5.y + 1.0, // Тянем Y значительно вверх для подъема
+//     baseControl5.z + 1.8 // Небольшое смещение по Z, если нужно для формы
+// );
+
+// const segment5_control = new Vector3(
+//     baseControl5.x - 7, // Тянем X назад (в отрицательное направление) для движения "в камеру"
+//     baseControl5.y + 2.5, // Тянем Y значительно вверх для подъема
+//     baseControl5.z + 1.2 // Небольшое смещение по Z, если нужно для формы
+// );
+const segment5_control = new Vector3(
+    segment5_start.x - 4,   // Тянем назад по X, но не слишком далеко
+    segment5_start.y - 0.6, // Тянем вверх, чтобы сформировать плавный подъем
+    segment5_start.z - 0.3  // Держим близко к оси Z=0, если цель - прямое удаление
+);
+
+console.log(`segment5_control: ${segment5_control.toArray()}`);
+// Ваш оригинальный segment5_control = new Vector3(-3, yStart + 1.5, 0.1); был очень близок к этому.
+
+const segment5_end = new Vector3(3, yStart, 0); // End of Segment 5
+this.bezierSegments.push(new QuadraticBezierCurve3(segment5_start, segment5_control, segment5_end));
+
+   // --- Segment 6: Final ascent "into camera" and departure (Focus: Smooth this segment!) ---
+const segment6_start = segment5_end; // (0, 1, 0)
+
+// **КЛЮЧЕВОЙ РАСЧЕТ ДЛЯ G1-НЕПРЕРЫВНОСТИ НА СТЫКЕ SEGMENT 4 И SEGMENT 5:**
+// C5 = P + (P - C4), где P = segment5_start, C4 = segment4_control
+// const baseControl6 = segment5_start.clone().add(segment5_start.clone().sub(segment4_control));
+
+// **КОРРЕКТИРУЕМ segment5_control для желаемого финального подъема и удаления:**
+// Начинаем с baseControl5 для плавности, затем смещаем для формы.
+// const segment5_control = new Vector3(
+//     baseControl5.x + 16, // Тянем X назад (в отрицательное направление) для движения "в камеру"
+//     baseControl5.y + 1.0, // Тянем Y значительно вверх для подъема
+//     baseControl5.z + 1.8 // Небольшое смещение по Z, если нужно для формы
+// );
+
+// const segment5_control = new Vector3(
+//     baseControl5.x - 7, // Тянем X назад (в отрицательное направление) для движения "в камеру"
+//     baseControl5.y + 2.5, // Тянем Y значительно вверх для подъема
+//     baseControl5.z + 1.2 // Небольшое смещение по Z, если нужно для формы
+// );
+const segment6_control = new Vector3(
+    segment6_start.x - 3,   // Тянем назад по X, но не слишком далеко
+    segment6_start.y - 0.1, // Тянем вверх, чтобы сформировать плавный подъем
+    segment6_start.z  // Держим близко к оси Z=0, если цель - прямое удаление
+);
+
+// Ваш оригинальный segment5_control = new Vector3(-3, yStart + 1.5, 0.1); был очень близок к этому.
+
+const segment6_end = new Vector3(-15, yStart+ 3, 0); // End of Segment 5
+this.bezierSegments.push(new QuadraticBezierCurve3(segment6_start, segment6_control, segment6_end));
+
+
+
+
+
+
+// const segment1_start = new Vector3(0, yStart, 0);
+// const segment1_control = new Vector3(10.29, yStart, 0);
+// const segment1_end = new Vector3(12.83, yStart, -0.65);
+// this.bezierSegments.push(new QuadraticBezierCurve3(segment1_start, segment1_control, segment1_end));
+
+// const segment2_start = segment1_end; // (10.48, 0, -2.98)
+// const segment2_control = new Vector3(24.31, yStart + 3, -4.04);
+// const segment2_end = new Vector3(22.51, yStart + 3, -0.77);
+// this.bezierSegments.push(new QuadraticBezierCurve3(segment2_start, segment2_control, segment2_end));
+
+// const segment3_start = segment2_end; // (19.46, 0, -0.76)
+// const segment3_control1 = new Vector3(20.96, yStart+3, 1.41);
+// const segment3_end = new Vector3(14.26, yStart, 0.38);
+// this.bezierSegments.push(new QuadraticBezierCurve3(segment3_start, segment3_control1, segment3_end));
+
+// const segment4_start = segment3_end; // (19.46, 0, -0.76)
+// const segment4_control1 = new Vector3(3.72, yStart, 0);
+// const segment4_end = new Vector3(-10, yStart+3, 0);
+// this.bezierSegments.push(new QuadraticBezierCurve3(segment4_start, segment4_control1, segment4_end));
 
 
 this.path = new CurvePath();
@@ -150,7 +318,7 @@ this.bezierSegments.forEach(segment => {
 
         const position = this.path.getPoint(t); 
         this.car.position.copy(position);
-        const bias = 0.07;
+        const bias = 0.1;
 
         const timeRotation = t + bias < 1 ? t + bias : 1; // Prevents out of bounds error
 
@@ -160,7 +328,7 @@ this.bezierSegments.forEach(segment => {
 
         let tangent: Vector3 = new Vector3();
 
-        if (t > 0.22 && t < 0.42) {
+        if (t > 0.22 && t < 0.5) {
           tangent.copy(this.path.getTangent(timeRotation));
         } else {
           tangent.copy(this.path.getTangent(t));
@@ -177,7 +345,7 @@ this.bezierSegments.forEach(segment => {
       }
     }, 1);
 
-    this.timeline.to(this.step, {y: 2.5, duration: 3.5, 
+    this.timeline.to(this.step, {y: 2.5, duration: 5, 
       onUpdate: () => {
         const t = this.step.y;
         const progress = Math.cos(t) * -dissolveSettings.k;
@@ -192,7 +360,7 @@ this.bezierSegments.forEach(segment => {
       }
     }, 4);
 
-    this.timeline.to(this.camera.position, { y: 3.5, duration: 9 }, 0);
+    this.timeline.to(this.camera.position, { y: 2.5, duration: 9 }, 0);
 
   }
 };
