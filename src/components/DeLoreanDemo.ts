@@ -1,4 +1,4 @@
-import { BufferGeometry, CatmullRomCurve3, CineonToneMapping, Clock, Data3DTexture, DataTexture, Group, Line, LineBasicMaterial, Mesh, MeshStandardMaterial, Object3D, PerspectiveCamera, PlaneGeometry, PMREMGenerator, RepeatWrapping, Texture, TextureLoader, Vector2 } from "three";
+import { CatmullRomCurve3, CineonToneMapping, Clock, Data3DTexture, DataTexture, Group, Line, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, PerspectiveCamera, PlaneGeometry, PMREMGenerator, RepeatWrapping, Texture, TextureLoader, TubeGeometry, Vector2 } from "three";
 import { Demo } from "./Demo";
 import { loadLutTexture } from "./helpers";
 import { GLTF, GLTFLoader, RGBELoader } from "three/examples/jsm/Addons";
@@ -41,7 +41,7 @@ export class DeLoreanDemo extends Demo {
     enableControls = false;
 
     car!: Mesh;
-    curveMesh!: Line;
+    curveMesh!: Line | Mesh;
     clock = new Clock();
     t = 0;
     visibleCurve = true;
@@ -234,7 +234,7 @@ export class DeLoreanDemo extends Demo {
                 // newMat.alphaTest = 0.1;
                 newMat.transparent = true;
                 if (newMat.name.includes('MTL')) {
-                    console.log('found mtl', newMat.name);
+                    // console.log('found mtl', newMat.name);
                     // newMat.emissive.copy(dissolveUniformData.engineColor.value);
                     this.engineMaterial.push(newMat);
                 }
@@ -287,27 +287,27 @@ export class DeLoreanDemo extends Demo {
         this.modelContainer.position.set(0, -0.5, 0);
         // this.modelContainer.visible = false;
         const animation = new Animation(this.modelContainer, this.camera);
-        // const tubeGeometry = new TubeGeometry( animation.curve, 500, 0.1, 12, false );
-        // const material = new MeshBasicMaterial( { color: 0xff00ff } );
-		// // const wireframeMaterial = new MeshBasicMaterial( { color: 0x000000, opacity: 0.3, wireframe: true, transparent: true } );
+        const tubeGeometry = new TubeGeometry( animation.curve, 500, 0.1, 4, false );
+        const material = new MeshBasicMaterial( { color: 0xff00ff } );
+		// const wireframeMaterial = new MeshBasicMaterial( { color: 0x000000, opacity: 0.3, wireframe: true, transparent: true } );
 
-        // this.curveMesh = new Mesh( tubeGeometry, material );
-        const divisions = 50; // Количество сегментов для каждой кривой в path
+        this.curveMesh = new Mesh( tubeGeometry, material );
+        // const divisions = 50; // Количество сегментов для каждой кривой в path
                       // Если у вас 5 bezierSegments, то общее количество точек будет (5 * divisions) + 1
-        const curvePoints = animation.path.getPoints(divisions); 
+        // const curvePoints = animation.path.getPoints(divisions); 
 
-        // 4. Создаем BufferGeometry из этих точек
-        const lineGeometry = new BufferGeometry().setFromPoints(curvePoints);
-        // 5. Создаем материал для линии
-        const lineMaterial = new LineBasicMaterial({ color: 0xff0000 }); // Красная линия
+        // // 4. Создаем BufferGeometry из этих точек
+        // const lineGeometry = new BufferGeometry().setFromPoints(curvePoints);
+        // // 5. Создаем материал для линии
+        // const lineMaterial = new LineBasicMaterial({ color: 0xff0000 }); // Красная линия
 
         // 6. Создаем объект Line
-        this.curveMesh = new Line(lineGeometry, lineMaterial);
+        // this.curveMesh = new Line(lineGeometry, lineMaterial);
 
         this.curveMesh.visible = this.visibleCurve;
         // const wireframe = new Mesh( tubeGeometry, wireframeMaterial );
         // this.curveMesh.add( wireframe );
-
+        // this.scene.add(mesh);
         this.scene.add( this.curveMesh );
 
     }

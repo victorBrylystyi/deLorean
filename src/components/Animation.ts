@@ -1,10 +1,14 @@
 import { gsap } from 'gsap';
-import { Color, CubicBezierCurve3, CurvePath, Mesh, Object3D, PerspectiveCamera, QuadraticBezierCurve3, Vector3 } from 'three';
+import { CatmullRomCurve3, Color, CubicBezierCurve3, CurvePath, Line, Mesh, Object3D, PerspectiveCamera, QuadraticBezierCurve3, Vector3 } from 'three';
 import { dissolveSettings, dissolveUniformData } from '../helpers/constants';
 import { Dissolve } from './Dissolve';
 
 const yStart = 0;
 const startColor = new Color(0, 0, 0);
+
+
+
+
 
 export class Animation {
   private car: Object3D;
@@ -31,6 +35,34 @@ export class Animation {
 //     new Vector3(-15, yStart + 4, 0),   // Final departure (maintains height)
 // ];
 
+// Vector3(z, y, x)
+// from https://threejs.org/examples/#webgl_geometry_spline_editor
+  // editorPoints: Vector3[] = [
+  //   new Vector3(0, -190, 0), // start
+
+  //   new Vector3(-44.79241409233821, -182.91967078204004, -229.35386961575412), // 2
+  //   new Vector3(1.5745674504592841, -150.74429585432085, -253.69819717730581), // 3
+	//   new Vector3(15.016152305253115, -171.29053247258102, -136.26058188341187), // 4
+
+	//   new Vector3(0, -190, 0), // back to start
+
+	//   new Vector3(0.7530974996839603, -154.71100646815302, 157.16569344074426) // end
+	// ];
+  editorPoints: Vector3[] = [
+    new Vector3(0, -182, 0),
+
+    new Vector3(-10.134925249831738, -178.5196865774753, -212.9707205091429),
+    new Vector3(-69.29305160737398, -160.65123379495873, -436.9631271510253),
+    new Vector3(-3.826958639067712, -117.12688716855976, -464.28841371646547),
+    new Vector3(8.439726341172076, -174.61756083201942, -223.380277868082),
+    new Vector3(1.8740014655876482, -179.97564915387775, -47.026429884388946),
+
+    new Vector3(-1.170724070320432, -136.12570024616315, 127.42946899071606)
+];
+  points: Vector3[] = [];
+  curve!: CatmullRomCurve3;
+  curveMesh!: Line;
+
   public bezierSegments: (CubicBezierCurve3 | QuadraticBezierCurve3)[] = [];
   public path!: CurvePath<Vector3>;
 
@@ -46,6 +78,20 @@ export class Animation {
   constructor(car: Object3D, camera: PerspectiveCamera) {
     this.car = car;
     this.camera = camera;
+
+    this.editorPoints.forEach((point: Vector3) => {
+      const {x, y, z} = point;
+
+      this.points.push(new Vector3(
+        -z/10, 
+        (182 + y)/10, 
+        x/10,
+      ));
+    });
+
+    this.curve = new CatmullRomCurve3(this.points, false, 'catmullrom', 0.58);
+    this.curve.curveType = 'catmullrom';
+
 
     this.timeline = gsap.timeline({ repeat: -1, defaults: {
       ease: "power2.inOut",
@@ -315,7 +361,10 @@ this.bezierSegments.forEach(segment => {
 
         // this.car.quaternion.slerp(targetQuaternion, 0.2);
 
-        const position = this.path.getPoint(t); 
+        // const path = this.path;
+        const path = this.curve;
+
+        const position = path.getPoint(t); 
         this.car.position.copy(position);
         const bias = 0.1;
 
@@ -327,10 +376,10 @@ this.bezierSegments.forEach(segment => {
 
         let tangent: Vector3 = new Vector3();
 
-        if (t > 0.22 && t < 0.5) {
-          tangent.copy(this.path.getTangent(timeRotation));
+        if (t > 0.12 && t < 0.7) {
+          tangent.copy(path.getTangent(timeRotation));
         } else {
-          tangent.copy(this.path.getTangent(t));
+          tangent.copy(path.getTangent(t));
         }
 
         const tempObject = new Object3D();
@@ -359,7 +408,7 @@ this.bezierSegments.forEach(segment => {
       }
     }, 4);
 
-    this.timeline.to(this.camera.position, { y: 2.5, duration: 9 }, 0);
+    this.timeline.to(this.camera.position, { y: 3.5, duration: 9 }, 0);
 
   }
 };
