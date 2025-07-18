@@ -333,9 +333,9 @@ export class DeLoreanDemo extends Demo {
         this.gui.add(dissolveSettings, "progress", -dissolveSettings.k, dissolveSettings.k, 0.001).name("Progress");
 
         this.gui.add(dissolveSettings, "kFreg", 0.0, 1.0, 0.001).name("K Freg");
-        this.gui.add(this, "enableControls").name("Controls").onChange((value: boolean) => {
-            this.controls.enabled = value;
-        });
+        // this.gui.add(this, "enableControls").name("Controls").onChange((value: boolean) => {
+        //     this.controls.enabled = value;
+        // });
         this.gui.add(this, "visibleCurve").name("Curve Visibility").onChange((value: boolean) => {
             if (this.curveMesh) {
                 this.curveMesh.visible = value;
