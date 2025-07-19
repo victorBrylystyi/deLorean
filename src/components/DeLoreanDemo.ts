@@ -1,4 +1,4 @@
-import { BufferGeometry, CatmullRomCurve3, CineonToneMapping, Clock, Data3DTexture, DataTexture, Group, Line, LineBasicMaterial, Mesh, MeshStandardMaterial, Object3D, PerspectiveCamera, PlaneGeometry, PMREMGenerator, RepeatWrapping, Texture, TextureLoader, Vector2 } from "three";
+import { CatmullRomCurve3, CineonToneMapping, Clock, Data3DTexture, DataTexture, Group, Line, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, PerspectiveCamera, PlaneGeometry, PMREMGenerator, RepeatWrapping, Texture, TextureLoader, TubeGeometry, Vector2 } from "three";
 import { Demo } from "./Demo";
 import { loadLutTexture } from "./helpers";
 import { GLTF, GLTFLoader, RGBELoader } from "three/examples/jsm/Addons";
@@ -8,7 +8,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { Dissolve } from "./Dissolve";
 import { dissolveSettings, dissolveUniformData, materialParams } from "../helpers/constants";
 import { ParticleMesh } from "./ParticleMesh";
-import { Animation2 } from "./Animation2";
+import { Animation } from "./Animation";
 
 
 const lutPath = '/assets/lut/';
@@ -287,17 +287,17 @@ export class DeLoreanDemo extends Demo {
         this.modelContainer.position.set(0, -0.5, 0);
         // this.modelContainer.visible = false;
 
-        // const animation = new Animation(this.modelContainer, this.camera);
-        // const tubeGeometry = new TubeGeometry( animation.curve, 500, 0.05, 4, true );
-        // const material = new MeshBasicMaterial( { color: 0xff00ff } );
-        // this.curveMesh = new Mesh( tubeGeometry, material );
+        const animation = new Animation(this.modelContainer, this.camera);
+        const tubeGeometry = new TubeGeometry( animation.curve, 500, 0.05, 4, true );
+        const material = new MeshBasicMaterial( { color: 0xff00ff } );
+        this.curveMesh = new Mesh( tubeGeometry, material );
 
-        const divisions = 50; // Количество сегментов для каждой кривой в path
-        const animation2 = new Animation2(this.modelContainer, this.camera);
-        const curvePoints = animation2.path.getPoints(divisions); 
-        const lineGeometry = new BufferGeometry().setFromPoints(curvePoints);
-        const lineMaterial = new LineBasicMaterial({ color: 0xff0000 }); // Красная линия
-        this.curveMesh = new Line(lineGeometry, lineMaterial);
+        // const divisions = 50; // Количество сегментов для каждой кривой в path
+        // const animation2 = new Animation2(this.modelContainer, this.camera);
+        // const curvePoints = animation2.path.getPoints(divisions); 
+        // const lineGeometry = new BufferGeometry().setFromPoints(curvePoints);
+        // const lineMaterial = new LineBasicMaterial({ color: 0xff0000 }); // Красная линия
+        // this.curveMesh = new Line(lineGeometry, lineMaterial);
 
         this.curveMesh.visible = this.visibleCurve;
         // const wireframe = new Mesh( tubeGeometry, wireframeMaterial );
