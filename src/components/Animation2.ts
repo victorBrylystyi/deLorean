@@ -1,0 +1,175 @@
+import { gsap } from 'gsap';
+import { CatmullRomCurve3, Color, CubicBezierCurve3, CurvePath, Line, Mesh, Object3D, PerspectiveCamera, QuadraticBezierCurve3, Vector3 } from 'three';
+import { dissolveSettings, dissolveUniformData } from '../helpers/constants';
+import { Dissolve } from './Dissolve';
+
+const yStart = 0;
+const startColor = new Color(0, 0, 0);
+
+export class Animation2 {
+  private car: Object3D;
+  private camera: PerspectiveCamera;
+  private timeline: gsap.core.Timeline;
+
+  points: Vector3[] = [];
+  curve!: CatmullRomCurve3;
+  curveMesh!: Line;
+
+  public bezierSegments: (CubicBezierCurve3 | QuadraticBezierCurve3)[] = [];
+  public path!: CurvePath<Vector3>;
+
+  private step = {
+    x: 0,
+    y: 0,
+    z: -0.5,
+    a: 0
+  };
+
+  private engineMaterial: Dissolve[] = [];
+
+  constructor(car: Object3D, camera: PerspectiveCamera) {
+    this.car = car;
+    this.camera = camera;
+
+    this.timeline = gsap.timeline({ repeat: -1, defaults: {
+      ease: "power2.inOut",
+      yoyo: true 
+    }});
+
+    const segment1_start = new Vector3(0, yStart, 0);
+    const segment1_control = new Vector3(9, yStart+0.5, -0.2);
+    const segment1_end = new Vector3(15.86, yStart+1.2, -3.08);
+
+    const segment2_start = segment1_end;
+    const segment2_control = new Vector3(27.95, yStart + 2.5, -5.65);
+    const segment2_end = new Vector3(27.95, yStart + 3, 0);
+
+    const segment3_start = segment2_end;
+    const segment3_control = new Vector3(24.95, yStart + 3, 7.65);
+    const segment3_end = new Vector3(15.86, yStart+0.5, 2.56);
+
+    const segment4_start = segment3_end;
+    const segment4_control = new Vector3(8, yStart+0.2, 0.38);
+    const segment4_end = new Vector3(-12, yStart+3.8, -0.4);
+
+    this.bezierSegments.push(new QuadraticBezierCurve3(segment1_start, segment1_control, segment1_end));
+    this.bezierSegments.push(new QuadraticBezierCurve3(segment2_start, segment2_control, segment2_end));
+    this.bezierSegments.push(new QuadraticBezierCurve3(segment3_start, segment3_control, segment3_end));
+    this.bezierSegments.push(new QuadraticBezierCurve3(segment4_start, segment4_control, segment4_end));
+
+    this.path = new CurvePath();
+    this.bezierSegments.forEach(segment => {
+        this.path.add(segment);
+    });
+
+    this.car.traverse((obj) => {
+      if (obj instanceof Mesh) {
+        const mat = obj.material;
+        if (mat.name.includes('MTL')) {
+          // mat.emissive.copy(dissolveUniformData.engineColor.value);
+          this.engineMaterial.push(mat);
+        }
+      }
+    })
+    this.createAnimation();
+  }
+
+  createAnimation() {
+
+    this.timeline.to(this.car.position, {y: 0, duration: 1, 
+      onStart: () => {
+        this.car.position.set(0,-0.5, 0);
+        this.car.lookAt(new Vector3(2, -0.5, 0));
+        dissolveSettings.progress = -dissolveSettings.k;
+        dissolveUniformData.uFreq.value = dissolveSettings.kFreg * 2.0;
+      }, 
+    }, 0);
+
+    this.timeline.to(this.step, {a: 1, z: 0, duration: 1, 
+      onStart: () => {
+        this.engineMaterial.forEach((mat: Dissolve) => {
+          mat.emissive.copy(startColor);
+        }); 
+      },
+      onUpdate: () => {
+        const progress = this.step.a; 
+
+        const interpolatedColor = new Color();
+        interpolatedColor.copy(startColor).lerp(dissolveUniformData.engineColor.value, progress);
+
+        this.engineMaterial.forEach((mat: Dissolve) => {
+            mat.emissive.copy(interpolatedColor);
+        });
+      }, 
+    },  1);
+
+    this.timeline.to(this.step, {x: 1, duration: 8, 
+      onUpdate: () => {
+        const t = this.step.x; 
+
+        // const position = this.curve.getPoint(t); 
+        // this.car.position.copy(position);
+
+        // const tangent = this.curve.getTangent(t);
+        // const lookAtTarget = new Vector3().addVectors(position, tangent);
+        // this.car.lookAt(lookAtTarget);
+        
+        // const tangent = this.curve.getTangent(t).normalize();
+        // const targetQuaternion = new Quaternion();
+        // targetQuaternion.setFromUnitVectors(new Vector3(0, 0, 1), tangent); 
+        // // If car rotation order is YXZ, you can use:
+        // // const m = new THREE.Matrix4().lookAt(position, position.clone().add(tangent), up);
+        // // targetQuaternion.setFromRotationMatrix(m);
+
+        // this.car.quaternion.slerp(targetQuaternion, 0.2);
+
+        const path = this.path;
+
+        const position = path.getPoint(t); 
+        this.car.position.copy(position);
+        const bias = 0.1;
+
+        const timeRotation = t + bias < 1 ? t + bias : 1; // Prevents out of bounds error
+
+        // const tangent = this.path.getTangent(timeRotation);
+        // const lookAtTarget = new Vector3().addVectors(position, tangent);
+        // this.car.lookAt(lookAtTarget);
+
+        let tangent: Vector3 = new Vector3();
+
+        if (t > 0.12 && t < 0.72) {
+          tangent.copy(path.getTangent(timeRotation));
+        } else {
+          tangent.copy(path.getTangent(t));
+        }
+
+        const tempObject = new Object3D();
+        tempObject.position.copy(position);
+        tempObject.lookAt(position.clone().add(tangent)); 
+        
+        const targetQuaternion = tempObject.quaternion;
+
+        this.car.quaternion.slerp(targetQuaternion, 0.06); // (0.05 - 0.2) for smoothness
+
+      }
+    }, 1);
+
+    this.timeline.to(this.step, {y: 2.5, duration: 5, 
+      onUpdate: () => {
+        const t = this.step.y;
+        const progress = Math.cos(t) * -dissolveSettings.k;
+
+        dissolveSettings.progress = progress;
+        dissolveUniformData.uFreq.value = Math.abs(Math.cos(t * dissolveSettings.kFreg)) * 2.0;
+      },
+      onStart: () => {
+          this.engineMaterial.forEach((mat: Dissolve) => {
+            mat.emissive.setRGB(0, 0, 0);
+          }); 
+      }
+    }, 4);
+
+    this.timeline.to(this.camera.position, { y: 3.5, duration: 9 }, 0);
+
+  }
+};

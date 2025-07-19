@@ -37,28 +37,15 @@ export class Animation {
 
 // Vector3(z, y, x)
 // from https://threejs.org/examples/#webgl_geometry_spline_editor
-  // editorPoints: Vector3[] = [
-  //   new Vector3(0, -190, 0), // start
-
-  //   new Vector3(-44.79241409233821, -182.91967078204004, -229.35386961575412), // 2
-  //   new Vector3(1.5745674504592841, -150.74429585432085, -253.69819717730581), // 3
-	//   new Vector3(15.016152305253115, -171.29053247258102, -136.26058188341187), // 4
-
-	//   new Vector3(0, -190, 0), // back to start
-
-	//   new Vector3(0.7530974996839603, -154.71100646815302, 157.16569344074426) // end
-	// ];
   editorPoints: Vector3[] = [
-    new Vector3(0, -182, 0),
-
-    new Vector3(-10.134925249831738, -178.5196865774753, -212.9707205091429),
-    new Vector3(-69.29305160737398, -160.65123379495873, -436.9631271510253),
+    new Vector3(0, -181, 0),
+    new Vector3(-9.255922367393794, -178.5196865774753, -118.17890548143589),
+    new Vector3(-66.53357616641155, -160.65123379495873, -436.9631271510253),
     new Vector3(-3.826958639067712, -117.12688716855976, -464.28841371646547),
-    new Vector3(8.439726341172076, -174.61756083201942, -223.380277868082),
+    new Vector3(7.721903808554387, -161.4928718158995, -223.380277868082),
     new Vector3(1.8740014655876482, -179.97564915387775, -47.026429884388946),
-
     new Vector3(-1.170724070320432, -136.12570024616315, 127.42946899071606)
-];
+  ];
   points: Vector3[] = [];
   curve!: CatmullRomCurve3;
   curveMesh!: Line;
@@ -84,14 +71,12 @@ export class Animation {
 
       this.points.push(new Vector3(
         -z/10, 
-        (182 + y)/10, 
+        (181 + y)/10, 
         x/10,
       ));
     });
 
-    this.curve = new CatmullRomCurve3(this.points, false, 'catmullrom', 0.58);
-    this.curve.curveType = 'catmullrom';
-
+    this.curve = new CatmullRomCurve3(this.points, false, 'centripetal', 0.58);
 
     this.timeline = gsap.timeline({ repeat: -1, defaults: {
       ease: "power2.inOut",
@@ -408,7 +393,7 @@ this.bezierSegments.forEach(segment => {
       }
     }, 4);
 
-    this.timeline.to(this.camera.position, { y: 3.5, duration: 9 }, 0);
+    this.timeline.to(this.camera.position, { y: 3.4, duration: 9 }, 0);
 
   }
 };
