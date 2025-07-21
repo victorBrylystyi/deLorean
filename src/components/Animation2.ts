@@ -127,7 +127,7 @@ export class Animation2 {
 
         const position = path.getPoint(t); 
         this.car.position.copy(position);
-        const bias = 0.1;
+        const bias = 0.2;
 
         const timeRotation = t + bias < 1 ? t + bias : 1; // Prevents out of bounds error
 
@@ -137,7 +137,7 @@ export class Animation2 {
 
         let tangent: Vector3 = new Vector3();
 
-        if (t > 0.12 && t < 0.72) {
+        if (t > 0.15 && t < 0.75) {
           tangent.copy(path.getTangent(timeRotation));
         } else {
           tangent.copy(path.getTangent(t));
