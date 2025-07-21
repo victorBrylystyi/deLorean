@@ -46,11 +46,11 @@ export class Animation2 {
 
     const segment3_start = segment2_end;
     const segment3_control = new Vector3(24.95, yStart + 3, 7.65);
-    const segment3_end = new Vector3(15.86, yStart+0.5, 2.56);
+    const segment3_end = new Vector3(15.86, yStart, 1.56);
 
     const segment4_start = segment3_end;
-    const segment4_control = new Vector3(8, yStart+0.2, 0.38);
-    const segment4_end = new Vector3(-12, yStart+3.8, -0.4);
+    const segment4_control = new Vector3(8, yStart-0.2,-1.58);
+    const segment4_end = new Vector3(-12, yStart+3.8, 0.7);
 
     this.bezierSegments.push(new QuadraticBezierCurve3(segment1_start, segment1_control, segment1_end));
     this.bezierSegments.push(new QuadraticBezierCurve3(segment2_start, segment2_control, segment2_end));
@@ -133,13 +133,20 @@ export class Animation2 {
         const timeRotation = t + bias < 1 ? t + bias : 1; // Prevents out of bounds error
 
         let tangent: Vector3 = new Vector3();
-
-        if (t > 0.15 && t < 0.65) {
+        if (t > 0.15 && t < 0.7) {
           const tt = path.getTangent(timeRotation)
-          tangent.lerpVectors(tt, path.getTangent(t), 0.4);
+          tangent.lerpVectors(tt, path.getTangent(t), 0.2);
+
+          if (t > 0.4 && t < 0.7) {
+            this.engineMaterial.forEach((mat: Dissolve) => {
+                mat.emissive.copy(dissolveUniformData.engineColor.value);
+            });
+          }
+          // tangent.copy(tt);
         } else {
           tangent.copy(path.getTangent(t));
         }
+
 
         const tempObject = new Object3D();
         tempObject.position.copy(position);
@@ -165,7 +172,7 @@ export class Animation2 {
             mat.emissive.setRGB(0, 0, 0);
           }); 
       }
-    }, 4);
+    }, 3);
 
     this.timeline.to(this.camera.position, { y: 3.7, duration: 9 }, 0);
 
