@@ -127,18 +127,16 @@ export class Animation2 {
 
         const position = path.getPoint(t); 
         this.car.position.copy(position);
+
         const bias = 0.2;
 
         const timeRotation = t + bias < 1 ? t + bias : 1; // Prevents out of bounds error
 
-        // const tangent = this.path.getTangent(timeRotation);
-        // const lookAtTarget = new Vector3().addVectors(position, tangent);
-        // this.car.lookAt(lookAtTarget);
-
         let tangent: Vector3 = new Vector3();
 
-        if (t > 0.15 && t < 0.75) {
-          tangent.copy(path.getTangent(timeRotation));
+        if (t > 0.15 && t < 0.65) {
+          const tt = path.getTangent(timeRotation)
+          tangent.lerpVectors(tt, path.getTangent(t), 0.4);
         } else {
           tangent.copy(path.getTangent(t));
         }
@@ -169,7 +167,7 @@ export class Animation2 {
       }
     }, 4);
 
-    this.timeline.to(this.camera.position, { y: 3.5, duration: 9 }, 0);
+    this.timeline.to(this.camera.position, { y: 3.7, duration: 9 }, 0);
 
   }
 };
