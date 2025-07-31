@@ -1,4 +1,4 @@
-import { BufferGeometry, CatmullRomCurve3, CineonToneMapping, Clock, Data3DTexture, DataTexture, Group, Line, LineBasicMaterial, Mesh, MeshStandardMaterial, Object3D, PerspectiveCamera, PlaneGeometry, PMREMGenerator, RepeatWrapping, Texture, TextureLoader, Vector2 } from "three";
+import { BufferGeometry, CatmullRomCurve3, CineonToneMapping, Clock, Color, Data3DTexture, DataTexture, GridHelper, Group, Line, LineBasicMaterial, Material, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, PerspectiveCamera, PlaneGeometry, PMREMGenerator, PointLight, ShaderMaterial, Texture, TextureLoader, Vector2, Vector3 } from "three";
 import { Demo } from "./Demo";
 import { loadLutTexture } from "./helpers";
 import { GLTF, GLTFLoader, RGBELoader } from "three/examples/jsm/Addons";
@@ -8,15 +8,32 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { Dissolve } from "./Dissolve";
 import { dissolveSettings, dissolveUniformData, materialParams } from "../helpers/constants";
 import { ParticleMesh } from "./ParticleMesh";
-import { Animation2 } from "./Animation2";
-
+import { Animation } from "./Animation";
 
 const lutPath = '/assets/lut/';
 const envPath = '/assets/env/';
 const texturePath = '/assets/texture/';
 const modelPath = '/assets/model/';
 
+// const SCENE = 2;
+// const sceneLayer = new Layers();
+// sceneLayer.set(SCENE);
+
+// const BLOOM_SCENE = 1;
+// const bloomLayer = new Layers();
+// bloomLayer.set(BLOOM_SCENE);
+// console.log(bloomLayer.mask, sceneLayer.mask);
+// console.log(bloomLayer.test(bloomLayer), sceneLayer.test(sceneLayer));
+
+
+const darkMaterial = new MeshBasicMaterial({
+    color: 0x000000,
+});
+
 // const blackColor = new Color(0x000000);
+type MatType = {
+    [key: string]: Material;
+}
 
 export class DeLoreanDemo extends Demo {
 
@@ -36,6 +53,10 @@ export class DeLoreanDemo extends Demo {
     model!: GLTF;
     axels: Mesh[] = [];
 
+    mat: MatType = {};
+
+    gridHelper!: GridHelper;
+
     clockDissolve = 0;
 
     enableControls = false;
@@ -46,6 +67,25 @@ export class DeLoreanDemo extends Demo {
     t = 0;
     visibleCurve = true;
     curve!: CatmullRomCurve3;
+    flashLight = new PointLight(0xffffff, 0, 100);
+    carPosition = new Vector3();
+    floorMesh!: Mesh;
+    floorMaterial!: ShaderMaterial;
+
+    // nonBloomed = (obj: Object3D) => {
+    //     if (obj instanceof Mesh && (bloomLayer.test(obj.layers) === false)) {
+    //         // console.log('nonBloomed', obj.layers.mask, bloomLayer.mask);
+    //         this.mat[ obj.uuid ] = obj.material;
+    //         obj.material = darkMaterial;
+    //     }
+    // };
+
+    // restoreMat = (obj: Object3D) => {
+    //     if (obj instanceof Mesh && this.mat[obj.uuid]) {
+    //         obj.material = this.mat[obj.uuid];
+    //         delete this.mat[obj.uuid];
+    //     }
+    // }
 
     onPointerMove = (event: PointerEvent) => {
 
@@ -64,10 +104,11 @@ export class DeLoreanDemo extends Demo {
 
     onLoadEnv = (texture: DataTexture) => {
         const generator = new PMREMGenerator(this.renderer);
-        this.envTexture = generator.fromEquirectangular(texture).texture;
+        const envTexture = generator.fromEquirectangular(texture).texture;
+        this.envTexture = texture;
 
         // this.scene.background = this.envTexture;
-        this.scene.environment = this.envTexture;
+        this.scene.environment = envTexture
         // this.scene.backgroundBlurriness = 0.7;
         // this.scene.backgroundIntensity = 0.2;
 
@@ -99,7 +140,7 @@ export class DeLoreanDemo extends Demo {
     async preLoad() {
 
         await this.initLoad([
-            envPath + 'bismarckturm_hillside_1k.hdr',
+            envPath + 'rogland_clear_night_1k.hdr',
             lutPath + 'Cinematic-2.cube',
             modelPath + 'deLorean_C.glb',
             texturePath + 'particle.png'
@@ -114,6 +155,28 @@ export class DeLoreanDemo extends Demo {
     mount() {
         super.mount();
 
+        // this.backgroundScene.background = this.envTexture;
+
+        // const backGroundMesh = new Mesh(
+        //     new SphereGeometry(100, 64, 64),
+        //     new MeshBasicMaterial({
+        //         map: this.envTexture,
+        //         side: BackSide,
+        //         depthWrite: false,
+        //         depthTest: false,
+        //     })
+        // );
+        // backGroundMesh.layers.enable(SCENE);
+        // console.log(backGroundMesh.layers, bloomLayer.test(backGroundMesh.layers));
+
+        // this.scene.add(backGroundMesh);
+
+        this.backgroundScene.traverse((child) => {
+            if (child instanceof Mesh) {
+                console.log(child)
+            }
+        });
+        
         this.mountScene();
 
         this.renderer.domElement.addEventListener('pointermove', this.onPointerMove);
@@ -121,7 +184,7 @@ export class DeLoreanDemo extends Demo {
 
         // this.scene.background = this.envTexture;
         // this.scene.backgroundBlurriness = 0.7;
-        this.scene.environment = this.envTexture;
+        // this.scene.environment = this.envTexture;
 
     }
 
@@ -140,88 +203,69 @@ export class DeLoreanDemo extends Demo {
         // this.camera.rotation.y = -Math.PI/2;
 
         if (this.enableControls) {
-
             this.controls = new OrbitControls(this.camera, this.canvas);
             this.controls.enableDamping = true;
             this.controls.autoRotate = false;
             this.controls.enabled = this.enableControls;
         }
 
-
         this.postprocessing(this.scene, this.camera);
 
-        const floor = new Mesh(
-            new PlaneGeometry(20, 20),
-            new MeshStandardMaterial({
-                transparent: true,
-                color: 0xFFFFFF,
-                roughness: 1.0,
-                metalness: 0.5,
-                // envMap: this.envTexture,
-            })
-        );
+        // const floor = new Mesh(
+        //     new PlaneGeometry(20, 20),
+        //     new MeshStandardMaterial({
+        //         transparent: true,
+        //         color: 0xFFFFFF,
+        //         roughness: 1.0,
+        //         metalness: 0.5,
+        //         // envMap: this.envTexture,
+        //     })
+        // );
 
-        floor.rotation.x = - Math.PI / 2;
-        floor.position.y = -0.26;
+        // floor.rotation.x = - Math.PI / 2;
+        // floor.position.y = -0.26;
 
-        const floorPath = texturePath + 'texture_08.png';
-        const floorAlphaPath = texturePath + 'alpha.png';
 
-        new TextureLoader().load(floorPath, (texture) => {
-            texture.flipY = false;
-            texture.wrapS = texture.wrapT = RepeatWrapping;
-            texture.repeat.set(16, 16);
 
-            floor.material.map = texture;
-            floor.material.needsUpdate = true;
-        });
-        new TextureLoader().load(floorAlphaPath, (texture) => {
-            texture.flipY = false;
+        // const floorPath = texturePath + 'texture_08.png';
+        // const floorAlphaPath = texturePath + 'alpha.png';
+        // const floorDisplPath = texturePath + 'displacementmap.png';
 
-            floor.material.alphaMap = texture;
-            floor.material.needsUpdate = true;
-        });
+        // new TextureLoader().load(floorPath, (texture) => {
+        //     texture.flipY = false;
+        //     texture.wrapS = texture.wrapT = RepeatWrapping;
+        //     texture.repeat.set(16, 16);
+
+        //     floor.material.map = texture;
+        //     floor.material.needsUpdate = true;
+        // });
+        // new TextureLoader().load(floorAlphaPath, (texture) => {
+        //     texture.flipY = false;
+
+        //     floor.material.alphaMap = texture;
+        //     floor.material.needsUpdate = true;
+        // });
+
+        // new TextureLoader().load(floorDisplPath, (texture) => {
+        //     texture.flipY = false;
+
+        //     texture.wrapS = texture.wrapT = RepeatWrapping;
+        //     // texture.repeat.set(16, 16);
+
+        //     floor.material.map = texture;
+        //     floor.material.needsUpdate = true;
+
+
+        //     floor.material.displacementMap = texture;
+        //     floor.material.displacementScale = 2;
+        //     floor.material.needsUpdate = true;
+        // });
 
         const car = this.model.scene.clone();
         car.traverse((child) => {
             if (child instanceof Mesh) {
  
                 const childMaterial = child.material as MeshStandardMaterial;
-
-                // const newMat = new CustomShaderMaterial({
-                //     baseMaterial: MeshStandardMaterial,
-                //     vertexShader: vertexShader,
-                //     fragmentShader: fragmentShader,
-                //     uniforms: {
-                //         uProgress: { value: this.progress },
-                //         uThickness: { value: 0.05 },
-                //         uColor: { value: new Color().setStyle('#eb5a13').multiplyScalar(50) },
-                //     },
-                //     color: currentMaterial.color,
-                //     roughness: currentMaterial.roughness,
-                //     metalness: currentMaterial.metalness,
-                //     emissive: currentMaterial.emissive,
-                //     emissiveIntensity: currentMaterial.emissiveIntensity,
-                //     side: currentMaterial.side,
-                //     depthWrite: true,
-                //     depthTest: true,
-                //     transparent: true,
-                //     toneMapped: true,
-                //     alphaTest: 0.1,
-
-                //     wireframe: currentMaterial.wireframe,
-                //     map: currentMaterial.map,
-                //     normalMap: currentMaterial.normalMap,
-                //     normalScale: currentMaterial.normalScale,
-                //     aoMap: currentMaterial.aoMap,
-                //     aoMapIntensity: currentMaterial.aoMapIntensity,
-                //     emissiveMap: currentMaterial.emissiveMap,
-                //     metalnessMap: currentMaterial.metalnessMap,
-                //     roughnessMap: currentMaterial.roughnessMap,
-                //     alphaMap: currentMaterial.alphaMap,
-                //     envMap: this.envTexture,
-                //     envMapIntensity: currentMaterial.envMapIntensity,
-                // });
 
                 const newMat = new Dissolve(childMaterial);
 
@@ -241,10 +285,13 @@ export class DeLoreanDemo extends Demo {
 
                 child.material = newMat;
 
+                // child.layers.enable(BLOOM_SCENE);
+                // console.log(child.layers.mask)
+
                 // console.log(child.material);
 
-                const particle = new ParticleMesh(this.renderer, child, this.particleTexture);
-                this.particles.push(particle);
+                // const particle = new ParticleMesh(this.renderer, child, this.particleTexture);
+                // this.particles.push(particle);
                 // this.scene.add(particle);
             }
         });
@@ -256,34 +303,161 @@ export class DeLoreanDemo extends Demo {
         // this.modelContainer.position.set(0, -0.7, 0);
         // this.modelContainer.rotation.y = Math.PI;
 
-        this.container.add(floor);
+        // this.container.add(floor);
         this.container.add(this.modelContainer);
 
         this.contactShadow.position.set(0, -0.2, 0);
         this.scene.add(this.contactShadow);
 
+        const w = 100, h = 70;
+
+        const floorGeometry = new PlaneGeometry(w, h, 100, 100);
+        floorGeometry.rotateX(-Math.PI / 2); 
+
+        this.floorMaterial = new ShaderMaterial({
+            uniforms: {
+                uCarPosition: { value: this.carPosition.copy(car.position) }, // Point 
+                uTime: { value: 0.0 }, // Время для анимации, если нужна
+                uResolution: { value: new Vector2(window.innerWidth, window.innerHeight) }, // Разрешение экрана
+                uGridOffset: { value: new Vector2(w / 2, h / 2) }, // (100, 100)
+                uGridScale: { value: new Vector2(w, h) },  
+                uGridColor: { value: new Color(0x1253ff) }, // Цвет линий сетки
+                uBackgroundColor: { value: new Color(0x000000) }, // Цвет фона сетки (очень темный)
+                uGradientColor1: { value: new Color(0x0000FF) }, // Цвет для градиента (например, синий)
+                uGradientColor2: { value: new Color(0xFF00FF) }, // Второй цвет для градиента (например, фиолетовый)
+                uGradientCenter: { value: new Vector2(0.5, 0.5) }, // Центр градиента на сетке
+                uGradientRadius: { value: 1.7 } // Радиус градиента
+            },
+            vertexShader: /* glsl */`
+                uniform float uTime;
+                uniform vec3 uCarPosition; 
+
+                varying vec2 vUv;
+                varying vec3 vPosition;
+                varying float vDisplacement;
+
+                void main() {
+                    vUv = uv;
+                    vPosition = position;
+
+                    float distToCar = distance(position.xz, uCarPosition.xz); 
+
+                    float displacementStrength = 0.0;
+                    float effectRadius = 20.0; 
+                    float maxDisplacement = 2.0; 
+
+                    if (distToCar < effectRadius) {
+                        displacementStrength = maxDisplacement * (1.0 - distToCar / effectRadius);
+                        displacementStrength = pow(displacementStrength, 2.0);
+                    }
+
+                    vDisplacement = displacementStrength; 
+
+                    vec3 displacedPosition = position - normal * displacementStrength; 
+
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(displacedPosition, 1.0);
+                }
+            `,
+            fragmentShader: /* glsl */`
+                uniform float uTime;
+                uniform vec2 uResolution;
+                uniform vec3 uCarPosition; 
+                uniform vec2 uGridOffset;
+                uniform vec2 uGridScale;
+                
+                uniform vec3 uGridColor;      
+                uniform vec3 uBackgroundColor; 
+                
+                uniform vec3 uGradientColor1;
+                uniform vec3 uGradientColor2; 
+                uniform vec2 uGradientCenter; 
+                uniform float uGradientRadius; 
+
+                varying vec2 vUv;
+                varying vec3 vPosition;      
+                varying float vDisplacement; 
+
+                void main() {
+    
+                    vec2 coord = vPosition.xz;
+
+                    float gridDensity = 0.2;
+                    float gridLineThickness = 0.03;
+
+                    vec2 grid = abs(fract(coord * gridDensity) - 0.5);
+                    float line = min(grid.x, grid.y);
+
+                    // Smoothing the grid lines
+                    float strength = fwidth(line);
+                    float gridFactor = smoothstep(gridLineThickness - strength, gridLineThickness, line);
+
+                    vec3 finalColor = mix(uGridColor, uBackgroundColor, gridFactor); 
+
+                    vec2 gradientCoord = (vPosition.xz + uGridOffset) / uGridScale;
+                    vec2 normalizedCarPos = (uCarPosition.xz + uGridOffset) / uGridScale;
+
+                    float distToGradientCenter = distance(gradientCoord, normalizedCarPos);
+                    // float distToGradientCenter = distance(gradientCoord, uGradientCenter);
+
+                    float gradientFactor = smoothstep(uGradientRadius, uGradientRadius - 0.2, distToGradientCenter); 
+
+                    vec3 gradientColor = mix(uGradientColor1, uGradientColor2, distToGradientCenter * 2.0);
+
+                    // or aply gradient based on gridFactor
+                    finalColor = mix(uBackgroundColor, gradientColor, 1.0 - gridFactor); 
+
+                    float blendedGridFactor = max(0.0, gridLineThickness - line); 
+                    vec3 gridLinesWithGradient = mix(uBackgroundColor, gradientColor, blendedGridFactor / gridLineThickness);
+                    finalColor = mix(finalColor, gridLinesWithGradient, 1.0 - gridFactor);
+
+                    float displacementEffect = vDisplacement / 5.0;
+
+                    // Maximize the effect of displacement on the grid color
+                    // finalColor += uGridColor * displacementEffect * 0.8;
+
+                    // if grid must be with transparent effect
+                    float transparencyEffect = displacementEffect;
+                    gl_FragColor = vec4(finalColor, 1.0 - transparencyEffect);
+
+                    // gl_FragColor = vec4(finalColor, 1.0); // default no transparency
+                }
+            `,
+            transparent: true,
+            depthTest: true,
+            depthWrite: true,
+        });
+
+        this.floorMesh = new Mesh(floorGeometry, this.floorMaterial);
+        this.floorMesh.position.y = -2; // Размещаем на уровне земли
+        this.scene.add(this.floorMesh);
+
+           // --- ИНИЦИАЛИЗАЦИЯ ОБЪЕКТА МОЛНИИ ---
+        const lightningMaterial = new LineBasicMaterial({
+            color: 0xADD8E6, // Светло-голубой/бирюзовый для электричества
+            linewidth: 3,    // Толщина линии (может не работать на всех GPU)
+            transparent: true,
+            opacity: 1,      // Начинается невидимой
+            // blending: THREE.AdditiveBlending // Для эффекта свечения
+        });
+        const lightningGeometry = new BufferGeometry(); // Пустая геометрия, которую будем обновлять
+        const lightningMesh = new Line(lightningGeometry, lightningMaterial);
+        this.scene.add(lightningMesh); // Добавляем на сцену
+        
+        
+        // this.scene.add(this.flashLight);
+
+                
+        // const size = 300; // Размер сетки (например, от -50 до 50 по X и Z)
+        // const divisionsGrid = 200; // Количество делений
+        // const colorCenterLine = 0x1253ff; // Цвет центральной линии
+        // const colorGrid = 0x1253ff;       // Цвет остальных линий
+
+        // this.gridHelper = new GridHelper(size, divisionsGrid, colorCenterLine, colorGrid);
+        // this.gridHelper.position.y = -0.21; // Размещаем на уровне земли
+        // this.scene.add(this.gridHelper);
+
         this.scene.add(this.container);
 
-        // this.car = new Mesh(new BoxGeometry(1, 1, 2), new MeshStandardMaterial({
-        //     color: 0x00ff00,
-        //     roughness: 0.5,
-        //     metalness: 0.5,
-        //     transparent: true,
-        //     opacity: 0.5,
-        // }));
-        // const y = 0.5
-        // this.car.position.set(0, y, 0);
-        // this.scene.add(this.car);
-
-        // const points = [
-        //     new Vector3(0, 0, 0), 
-        //     new Vector3(20, 0, -10),
-        //     new Vector3(23, 3, 0), 
-        //     new Vector3(20, 2, 0),
-        //     new Vector3(-10, 2, 0),
-        // ];
-
-        // this.curve = new CatmullRomCurve3(points);
         this.modelContainer.position.set(0, -0.5, 0);
         // this.modelContainer.visible = false;
 
@@ -293,8 +467,8 @@ export class DeLoreanDemo extends Demo {
         // this.curveMesh = new Mesh( tubeGeometry, material );
 
         const divisions = 50; // Количество сегментов для каждой кривой в path
-        const animation2 = new Animation2(this.modelContainer, this.camera);
-        const curvePoints = animation2.path.getPoints(divisions); 
+        const animation = new Animation(this.modelContainer, this.camera, this);
+        const curvePoints = animation.path.getPoints(divisions); 
         const lineGeometry = new BufferGeometry().setFromPoints(curvePoints);
         const lineMaterial = new LineBasicMaterial({ color: 0xff0000 }); // Красная линия
         this.curveMesh = new Line(lineGeometry, lineMaterial);
@@ -370,6 +544,11 @@ export class DeLoreanDemo extends Demo {
         //     // mesh.rotation.x = Math.sin(t) / 2;
         //     // mesh.rotation.z = Math.cos(t) / 2;
         // });
+
+        if (this.floorMaterial) {
+            this.floorMaterial.uniforms.uTime.value += dt;
+            // this.floorMaterial.uniforms.uMouse.value = this.mousePosition; // Обновляем позицию мыши
+        }
         if (dissolveSettings.animate) {
             this.clockDissolve += 0.005;
             const t = this.clockDissolve;
@@ -399,9 +578,9 @@ export class DeLoreanDemo extends Demo {
         dissolveUniformData.uProgress.value = dissolveSettings.progress;
         dissolveUniformData.uDissolveThreshold.value = dissolveSettings.progress;
 
-        this.particles.forEach(mesh => {
-            mesh.update(t);
-        });
+        // this.particles.forEach(mesh => {
+        //     mesh.update(t);
+        // });
 
         this.contactShadow.render(opacity);
 
@@ -432,7 +611,12 @@ export class DeLoreanDemo extends Demo {
         // this.camera.lookAt(this.modelContainer.position)
 
         // this.scene.background = blackColor;
+        // this.scene.traverse(this.nonBloomed);
+        this.bloomComposer.render();
+        // this.scene.traverse(this.restoreMat);
+        // this.mixPass.uniforms.uBloomTexture.value = this.composer.renderTarget2.texture;
         this.composer.render();
+        // this.renderer.render(this.scene, this.camera);
 
 
         // this.scene.background = this.envTexture;

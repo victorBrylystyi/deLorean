@@ -30,8 +30,8 @@ export const dissolveUniformData = {
 
 export const bloomUniformData = {
     uStrength: new Uniform(1.66),
-    uRadius: new Uniform(0.2),
-    uThreshold: new Uniform(0.2),
+    uRadius: new Uniform(0.1),
+    uThreshold: new Uniform(0.0),
 };
 
 export const materialParams = {

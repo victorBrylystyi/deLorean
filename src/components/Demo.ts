@@ -1,6 +1,6 @@
 
-import { Camera, Data3DTexture, DataTexture, Mesh, Scene, Vector2, WebGLRenderer } from "three";
-import { OutputPass, RenderPass, UnrealBloomPass, SSAARenderPass, EffectComposer, LUTPass } from "three/examples/jsm/Addons.js";
+import { Camera, Data3DTexture, DataTexture, Mesh, Scene, ShaderMaterial, SRGBColorSpace, Vector2, WebGLRenderer } from "three";
+import { OutputPass, RenderPass, UnrealBloomPass, SSAARenderPass, EffectComposer, LUTPass, ShaderPass } from "three/examples/jsm/Addons.js";
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 import GUI from "lil-gui";
 import { ContactShadows } from "./ContactShadows";
@@ -12,16 +12,18 @@ export class Demo {
     canvas = document.createElement('canvas');
     renderer = new WebGLRenderer({ 
         canvas: this.canvas, 
-        antialias: false, 
+        antialias: true, 
         // alpha: true,
     });
     scene = new Scene();
+    backgroundScene = new Scene();
     stats = new Stats();
     gui!: GUI;
     processId = 0;
     lastUpdateTime = 0;
 
     composer = new EffectComposer(this.renderer);
+    bloomComposer = new EffectComposer(this.renderer);
     // composer1 = new EffectComposer(this.renderer);
     bloomPass = new UnrealBloomPass(new Vector2(1024, 768), bloomUniformData.uStrength.value, bloomUniformData.uRadius.value, bloomUniformData.uThreshold.value);
     lutPass = new LUTPass({ intensity: 0.0 });
@@ -51,11 +53,16 @@ export class Demo {
         this.canvas.style.touchAction = 'none';
         this.rootElement.appendChild(this.canvas);
 
+        this.renderer.outputColorSpace = SRGBColorSpace;
+
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.setSize(this.rootElement.clientWidth, this.rootElement.clientHeight, true);
 
         this.composer.setPixelRatio(window.devicePixelRatio);
         this.composer.setSize(this.rootElement.clientWidth, this.rootElement.clientHeight);
+
+        this.bloomComposer.setPixelRatio(window.devicePixelRatio);
+        this.bloomComposer.setSize(this.rootElement.clientWidth, this.rootElement.clientHeight);
 
         if (this.mountStats) {
             this.stats.dom.style.position = 'absolute';
@@ -127,15 +134,63 @@ export class Demo {
 
     postprocessing(scene: Scene, camera: Camera) {
 
+        this.bloomComposer.renderToScreen = false;
+
         const ssaaRenderPass = new SSAARenderPass( scene, camera );
-        ssaaRenderPass.sampleLevel = 2;
+        ssaaRenderPass.sampleLevel = 4;
         ssaaRenderPass.unbiased = true;
 
         if (this.lutTexture) {
             this.lutPass.lut = this.lutTexture;
         }
 
-        // const renderPass = new RenderPass(scene, camera);
+        const renderPass = new RenderPass(scene, camera);
+        const outputPass = new OutputPass();
+
+        const mixPass = new ShaderPass(new ShaderMaterial({
+            uniforms: {
+                tDiffuse: { value: null },
+                uBloomTexture: {
+                    value: this.bloomComposer.renderTarget2.texture
+                },
+                uStrength: bloomUniformData.uStrength
+            },
+            vertexShader: /* glsl */ `
+                varying vec2 vUv;
+                void main(){
+                    vUv = uv;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+                }
+            `,
+            fragmentShader: /* glsl */`
+                uniform sampler2D tDiffuse;
+                uniform sampler2D uBloomTexture;
+                uniform float uStrength;
+                varying vec2 vUv;
+                void main(){
+                    vec4 baseEffect = texture2D(tDiffuse,vUv);
+                    vec4 bloomEffect = texture2D(uBloomTexture,vUv);
+                    gl_FragColor = baseEffect + bloomEffect * uStrength;
+                    // gl_FragColor = bloomEffect;
+                }
+            `,
+        }));
+        mixPass.needsSwap = true;
+
+        this.bloomComposer.addPass(renderPass);
+        this.bloomComposer.addPass(this.bloomPass);
+
+        this.composer.addPass(renderPass);
+        // this.composer.addPass(ssaaRenderPass);
+        this.composer.addPass(mixPass);
+        this.composer.addPass(outputPass);
+
+
+        // this.bloomComposer.addPass(renderPass);
+        // this.bloomComposer.addPass(mixPass);
+        // this.bloomComposer.addPass(outputPass);
+
+
 
         // const shaderPass = new ShaderPass(new ShaderMaterial({
         //     uniforms: {
@@ -167,11 +222,11 @@ export class Demo {
         //     `,
         // }));
 
-        this.composer.addPass(new RenderPass(scene, camera));
-            // this.composer.addPass(ssaaRenderPass);
-            this.composer.addPass(this.bloomPass);
-            this.composer.addPass(this.lutPass);
-        this.composer.addPass(new OutputPass());
+        // this.composer.addPass(new RenderPass(scene, camera));
+        //     // this.composer.addPass(ssaaRenderPass);
+        //     this.composer.addPass(this.bloomPass);
+        //     this.composer.addPass(this.lutPass);
+        // this.composer.addPass(new OutputPass());
 
 
         // this.composer.addPass(renderPass);
@@ -199,6 +254,9 @@ export class Demo {
 
         this.composer.setSize(w, h);
         this.composer.setPixelRatio(window.devicePixelRatio);
+
+        this.bloomComposer.setSize(w, h);
+        this.bloomComposer.setPixelRatio(window.devicePixelRatio);
 
         // this.composer1.setSize(w, h);
         // this.composer1.setPixelRatio(window.devicePixelRatio);

@@ -30,6 +30,7 @@ html {
   height: 100vh;
   aspect-ratio: 16 / 9;
   background: transparent;
+  /* background: radial-gradient(circle at center, #0d4a7d 0%, #06121f 80%, #000000 100%); */
   overflow: hidden;
   user-select: none;
 }

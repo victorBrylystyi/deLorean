@@ -1,5 +1,5 @@
 
-import { Mesh, MeshBasicMaterial, MeshDepthMaterial, Object3D, OrthographicCamera, PlaneGeometry, Scene, ShaderMaterial, WebGLRenderer, WebGLRenderTarget } from 'three';
+import { Color, Mesh, MeshBasicMaterial, MeshDepthMaterial, Object3D, OrthographicCamera, PlaneGeometry, Scene, ShaderMaterial, Uniform, WebGLRenderer, WebGLRenderTarget } from 'three';
 import { HorizontalBlurShader } from 'three/examples/jsm/shaders/HorizontalBlurShader.js';
 import { VerticalBlurShader } from 'three/examples/jsm/shaders/VerticalBlurShader.js';
 
@@ -15,16 +15,17 @@ export class ContactShadows extends Object3D {
     renderer: WebGLRenderer;
     scene: Scene;
 
-    PLANE_WIDTH = 20;
-    PLANE_HEIGHT = 20;
-    CAMERA_HEIGHT = 2;
+    PLANE_WIDTH = 40;
+    PLANE_HEIGHT = 40;
+    CAMERA_HEIGHT = 6;
 
     blur = 1.5;
-    darkness = 4;
+    darkness = 2;
     opacity = 1;
 
     planeOpacity = 0;
-    color = '#ffffff';
+    // color = '#bfbdb8';
+    color = '#000000';
 
     width = 1024;
     height = 1024;
@@ -98,14 +99,17 @@ export class ContactShadows extends Object3D {
         this.verticalBlurMaterial.depthTest = false;
 
         this.depthMaterial.userData.darkness = { value: this.darkness };
+        this.depthMaterial.needsUpdate = true;
         this.depthMaterial.onBeforeCompile = ( shader ) => {
 
-            shader.uniforms.darkness = this.depthMaterial.userData.darkness;
+            shader.uniforms.darkness = new Uniform( this.darkness );
+            shader.uniforms.uColor = new Uniform( new Color( this.color ) );
             shader.fragmentShader = /* glsl */`
                 uniform float darkness;
+                uniform vec3 uColor;
                 ${shader.fragmentShader.replace(
             'gl_FragColor = vec4( vec3( 1.0 - fragCoordZ ), opacity );',
-            'gl_FragColor = vec4( vec3( 0.0 ), ( 1.0 - fragCoordZ ) * darkness );'
+            'gl_FragColor = vec4( uColor, ( 1.0 - fragCoordZ ) * darkness );'
         )}
             `;
     
