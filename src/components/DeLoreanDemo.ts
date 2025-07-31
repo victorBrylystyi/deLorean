@@ -1,4 +1,4 @@
-import { BufferGeometry, CatmullRomCurve3, CineonToneMapping, Clock, Color, Data3DTexture, DataTexture, GridHelper, Group, Line, LineBasicMaterial, Material, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, PerspectiveCamera, PlaneGeometry, PMREMGenerator, PointLight, ShaderMaterial, Texture, TextureLoader, Vector2, Vector3 } from "three";
+import { BufferGeometry, CatmullRomCurve3, CineonToneMapping, Clock, Color, Data3DTexture, DataTexture, GridHelper, Group, Line, LineBasicMaterial, Material, Mesh, MeshStandardMaterial, Object3D, PerspectiveCamera, PlaneGeometry, PMREMGenerator, PointLight, ShaderMaterial, Texture, TextureLoader, Vector2, Vector3 } from "three";
 import { Demo } from "./Demo";
 import { loadLutTexture } from "./helpers";
 import { GLTF, GLTFLoader, RGBELoader } from "three/examples/jsm/Addons";
@@ -26,9 +26,9 @@ const modelPath = '/assets/model/';
 // console.log(bloomLayer.test(bloomLayer), sceneLayer.test(sceneLayer));
 
 
-const darkMaterial = new MeshBasicMaterial({
-    color: 0x000000,
-});
+// const darkMaterial = new MeshBasicMaterial({
+//     color: 0x000000,
+// });
 
 // const blackColor = new Color(0x000000);
 type MatType = {
@@ -532,7 +532,7 @@ export class DeLoreanDemo extends Demo {
 
         super.render(dt);
 
-        const t = dt / 2000;
+        // reconst t = dt / 2000;
         // this.modelContainer.position.y = -0.3;
         // this.modelContainer.position.y = -0.3 + Math.sin(t)/8;
         // this.modelContainer.rotation.z = Math.cos(t)/16;
