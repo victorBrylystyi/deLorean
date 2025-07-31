@@ -72,6 +72,10 @@ export class DeLoreanDemo extends Demo {
     floorMesh!: Mesh;
     floorMaterial!: ShaderMaterial;
 
+    lightningMesh!: Line;
+    lightningMaterial!: LineBasicMaterial;
+    lightningGeometry!: BufferGeometry;
+
     // nonBloomed = (obj: Object3D) => {
     //     if (obj instanceof Mesh && (bloomLayer.test(obj.layers) === false)) {
     //         // console.log('nonBloomed', obj.layers.mask, bloomLayer.mask);
@@ -309,7 +313,7 @@ export class DeLoreanDemo extends Demo {
         this.contactShadow.position.set(0, -0.2, 0);
         this.scene.add(this.contactShadow);
 
-        const w = 100, h = 70;
+        const w = 90, h = 100;
 
         const floorGeometry = new PlaneGeometry(w, h, 100, 100);
         floorGeometry.rotateX(-Math.PI / 2); 
@@ -317,6 +321,7 @@ export class DeLoreanDemo extends Demo {
         this.floorMaterial = new ShaderMaterial({
             uniforms: {
                 uCarPosition: { value: this.carPosition.copy(car.position) }, // Point 
+                uEffectRadius: { value: 0.0 }, // Радиус эффекта
                 uTime: { value: 0.0 }, // Время для анимации, если нужна
                 uResolution: { value: new Vector2(window.innerWidth, window.innerHeight) }, // Разрешение экрана
                 uGridOffset: { value: new Vector2(w / 2, h / 2) }, // (100, 100)
@@ -331,6 +336,7 @@ export class DeLoreanDemo extends Demo {
             vertexShader: /* glsl */`
                 uniform float uTime;
                 uniform vec3 uCarPosition; 
+                uniform float uEffectRadius;
 
                 varying vec2 vUv;
                 varying vec3 vPosition;
@@ -343,7 +349,7 @@ export class DeLoreanDemo extends Demo {
                     float distToCar = distance(position.xz, uCarPosition.xz); 
 
                     float displacementStrength = 0.0;
-                    float effectRadius = 20.0; 
+                    float effectRadius = uEffectRadius; 
                     float maxDisplacement = 2.0; 
 
                     if (distToCar < effectRadius) {
@@ -431,19 +437,19 @@ export class DeLoreanDemo extends Demo {
         this.floorMesh.position.y = -2; // Размещаем на уровне земли
         this.scene.add(this.floorMesh);
 
-           // --- ИНИЦИАЛИЗАЦИЯ ОБЪЕКТА МОЛНИИ ---
-        const lightningMaterial = new LineBasicMaterial({
-            color: 0xADD8E6, // Светло-голубой/бирюзовый для электричества
-            linewidth: 3,    // Толщина линии (может не работать на всех GPU)
+        // --- INITIALIZATION LIGHTNING ---
+        this.lightningMaterial = new LineBasicMaterial({
+            color: 0xADD8E6, 
+            linewidth: 3,
             transparent: true,
-            opacity: 1,      // Начинается невидимой
+            opacity: 0,     
             // blending: THREE.AdditiveBlending // Для эффекта свечения
         });
-        const lightningGeometry = new BufferGeometry(); // Пустая геометрия, которую будем обновлять
-        const lightningMesh = new Line(lightningGeometry, lightningMaterial);
-        this.scene.add(lightningMesh); // Добавляем на сцену
-        
-        
+        this.lightningGeometry = new BufferGeometry();
+        this.lightningMesh = new Line(this.lightningGeometry, this.lightningMaterial);
+        this.scene.add(this.lightningMesh);
+
+
         // this.scene.add(this.flashLight);
 
                 
