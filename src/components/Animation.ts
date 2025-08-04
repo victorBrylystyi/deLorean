@@ -1,5 +1,5 @@
 import { gsap } from 'gsap';
-import { CatmullRomCurve3, Color, CubicBezierCurve3, CurvePath, Line, Mesh, Object3D, PerspectiveCamera, QuadraticBezierCurve3, Vector3 } from 'three';
+import { CatmullRomCurve3, Color, CubicBezierCurve3, CurvePath, Line, Mesh, Object3D, QuadraticBezierCurve3, Vector3 } from 'three';
 import { dissolveSettings, dissolveUniformData } from '../helpers/constants';
 import { Dissolve } from './Dissolve';
 import { DeLoreanDemo } from './DeLoreanDemo';
@@ -9,7 +9,6 @@ const startColor = new Color(0, 0, 0);
 
 export class Animation {
   private car: Object3D;
-  private camera: PerspectiveCamera;
   private timeline: gsap.core.Timeline;
 
   points: Vector3[] = [];
@@ -20,7 +19,6 @@ export class Animation {
   public path!: CurvePath<Vector3>;
 
   demo: DeLoreanDemo;
-  lightningInterval!: number | null | undefined;
 
   private step = {
     x: 0,
@@ -31,9 +29,8 @@ export class Animation {
 
   private engineMaterial: Dissolve[] = [];
 
-  constructor(car: Object3D, camera: PerspectiveCamera, demo: DeLoreanDemo) {
+  constructor(car: Object3D, demo: DeLoreanDemo) {
     this.car = car;
-    this.camera = camera;
     this.demo = demo;
 
     this.timeline = gsap.timeline({ repeat: -1, defaults: {
@@ -78,87 +75,6 @@ export class Animation {
     })
     this.createAnimation();
   }
-
-  public generateLightningBoltPoints(
-      start: Vector3,
-      direction: Vector3, // Основное направление молнии
-      length: number,           // Общая длина молнии
-      segments: number,         // Количество сегментов основной линии
-      maxOffset: number         // Максимальное случайное смещение для каждого сегмента
-  ): Vector3[] {
-      const points: Vector3[] = [];
-      points.push(start.clone()); // Начальная точка
-
-      const currentPoint = start.clone();
-      const segmentLength = length / segments;
-
-      for (let i = 0; i < segments; i++) {
-          currentPoint.add(direction.clone().multiplyScalar(segmentLength)); // Двигаемся по основному направлению
-          const offset = new Vector3(
-              (Math.random() - 0.5) * maxOffset,
-              (Math.random() - 0.5) * maxOffset,
-              (Math.random() - 0.5) * maxOffset
-          );
-          points.push(currentPoint.clone().add(offset)); // Добавляем случайное смещение
-      }
-      return points;
-  }
-
-  public triggerLightningEffect(
-      carPosition: Vector3,
-      carForwardDirection: Vector3 // Куда смотрит машина
-  ) {
-      // Очищаем предыдущий интервал, если молния уже мерцает
-      if (this.lightningInterval) {
-          clearInterval(this.lightningInterval);
-          this.lightningInterval = null;
-      }
-      this.demo.lightningMaterial.opacity = 0; // Убеждаемся, что начинается невидимой
-
-      const lightningDuration = 0.4; // Общая длительность вспышки молнии (например, 0.4 секунды)
-      const flickerIntervalMs = 40; // Как часто обновляются вершины (например, 25 раз в секунду)
-      let flickerCount = 0;
-      const maxFlickers = Math.floor(lightningDuration * 1000 / flickerIntervalMs);
-
-      // Определяем базовые параметры молнии
-      const boltStart = carPosition.clone().add(carForwardDirection.clone().multiplyScalar(3)); // Начинается немного перед носом машины
-      const boltMainDirection = carForwardDirection.clone(); // Направление "вперед"
-      const boltLength = 15 + Math.random() * 5; // Длина молнии, немного случайная
-      const boltSegments = 7; // Количество основных сегментов
-      const boltMaxOffset = 3 + Math.random() * 2; // Максимальное случайное смещение
-
-      // --- Анимация появления молнии ---
-      gsap.to(this.demo.lightningMaterial, {
-          opacity: 1,
-          duration: 0.05, // Очень быстрое появление
-          ease: "power2.out",
-          onComplete: () => {
-              // Начинаем мерцание (генерацию новых вершин)
-              this.lightningInterval = setInterval(() => {
-                  if (flickerCount >= maxFlickers) {
-                      clearInterval(this.lightningInterval as number);
-                      this.lightningInterval = null;
-                      // Анимация затухания молнии
-                      gsap.to(this.demo.lightningMaterial, { opacity: 0, duration: 0.2 });
-                      return;
-                  }
-
-                  const points = this.generateLightningBoltPoints(
-                      boltStart,
-                      boltMainDirection,
-                      boltLength,
-                      boltSegments,
-                      boltMaxOffset
-                  );
-                  this.demo.lightningGeometry.setFromPoints(points); // Обновляем точки геометрии
-                  this.demo.lightningGeometry.attributes.position.needsUpdate = true; // Сообщаем Three.js, что буферы изменились
-
-                  flickerCount++;
-              }, flickerIntervalMs);
-          }
-      });
-  }
-
   createAnimation() {
 
     this.timeline.to(this.car.position, {y: 0, duration: 3, 
@@ -180,7 +96,6 @@ export class Animation {
 
         tangent.copy(path.getTangent(t));
 
-
         const tempObject = new Object3D();
         tempObject.position.copy(position);
         tempObject.lookAt(position.clone().add(tangent)); 
@@ -188,7 +103,6 @@ export class Animation {
         const targetQuaternion = tempObject.quaternion;
 
         this.car.quaternion.copy(targetQuaternion); // (0.05 - 0.2) for smoothness
-
 
         dissolveSettings.progress = dissolveSettings.k;
         dissolveUniformData.uFreq.value = dissolveSettings.kFreg * 2.0;
@@ -200,7 +114,8 @@ export class Animation {
         // const t = this.car.position.y;
         dissolveSettings.progress = Math.cos(t) * dissolveSettings.k;
         dissolveUniformData.uFreq.value = Math.abs(Math.cos(t * dissolveSettings.kFreg)) * 2.0;
-        this.demo.floorMaterial.uniforms.uEffectRadius.value = t * 20/2.5; // Adjusted for effect radius
+
+        this.demo.floorMaterial.uniforms.uEffectRadius.value = t * (20/2.5); // Adjusted for effect radius
       }
     }, 0);
 
@@ -261,7 +176,8 @@ export class Animation {
 
         const position = path.getPoint(t); 
         this.car.position.copy(position);
-        this.demo.carPosition.copy(position);
+
+        this.demo.carPosition.copy(position); // for floor effect
 
         const bias = 0.2;
 
@@ -277,7 +193,6 @@ export class Animation {
                 mat.emissive.copy(dissolveUniformData.engineColor.value);
             });
           }
-          // tangent.copy(tt);
         } else {
           tangent.copy(path.getTangent(t));
         }
@@ -291,11 +206,15 @@ export class Animation {
 
         this.car.quaternion.slerp(targetQuaternion, 0.06); // (0.05 - 0.2) for smoothness
 
-        // const carForwardDirection = this.car.getWorldDirection(new Vector3());
+        if (t > 0.4 && t < 0.7) {
+          // const numBolts = 3;             // Количество линий молнии
+          // const maxOffset = 0.5;          // Максимальное случайное смещение для зигзага
+          // const subdivisionsPerSegment = 5; // Детализация каждого изгиба
+          // const baseOffsetRandomness = 0.5; // Случайное смещение для каждой молнии относительно базовой кривой
 
-        // if (t > 0.49 && t < 0.61 && !this.lightningInterval) { // Если t между 0.69 и 0.71
-        //     this.triggerLightningEffect(this.car.position, carForwardDirection);
-        // }
+          // this.demo.createStaticMultipleLightningBolts(numBolts, maxOffset, subdivisionsPerSegment, baseOffsetRandomness);
+          // console.log(this.demo.lightningMaterial.linewidth);
+        }
 
       }
     }, 3);
@@ -316,7 +235,7 @@ export class Animation {
       }
     }, 6);
 
-    this.timeline.to(this.camera.position, { y: 3.7, duration: 9+2 }, 0);
+    // this.timeline.to(this.demo.camera.position, { y: 3.7, duration: 9+2 }, 0);
 
   }
 };

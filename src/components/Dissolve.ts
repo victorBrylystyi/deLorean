@@ -94,7 +94,7 @@ export class Dissolve extends MeshStandardMaterial {
     baseMaterial: Material;
     uniforms: { [uniform: string]: IUniform<any> } = dissolveUniformData;
 
-    constructor(baseMaterial: MeshStandardMaterial) {
+    constructor(baseMaterial: Material) {
         super();
         this.baseMaterial = baseMaterial;
         this.copy(baseMaterial);

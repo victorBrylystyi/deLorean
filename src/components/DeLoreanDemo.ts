@@ -1,4 +1,4 @@
-import { BufferGeometry, CatmullRomCurve3, CineonToneMapping, Clock, Color, Data3DTexture, DataTexture, GridHelper, Group, Line, LineBasicMaterial, Material, Mesh, MeshStandardMaterial, Object3D, PerspectiveCamera, PlaneGeometry, PMREMGenerator, PointLight, ShaderMaterial, Texture, TextureLoader, Vector2, Vector3 } from "three";
+import { BufferGeometry, CatmullRomCurve3, CineonToneMapping, Clock, Color, Data3DTexture, DataTexture, GridHelper, Group, Line, LineBasicMaterial, Material, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, PerspectiveCamera, PlaneGeometry, PMREMGenerator, PointLight, ShaderMaterial, SphereGeometry, Texture, TextureLoader, Vector2, Vector3 } from "three";
 import { Demo } from "./Demo";
 import { loadLutTexture } from "./helpers";
 import { GLTF, GLTFLoader, RGBELoader } from "three/examples/jsm/Addons";
@@ -9,6 +9,8 @@ import { Dissolve } from "./Dissolve";
 import { dissolveSettings, dissolveUniformData, materialParams } from "../helpers/constants";
 import { ParticleMesh } from "./ParticleMesh";
 import { Animation } from "./Animation";
+import { LightningStrike, RayParameters } from "three-stdlib";
+// import { gsap } from 'gsap';
 
 const lutPath = '/assets/lut/';
 const envPath = '/assets/env/';
@@ -59,7 +61,7 @@ export class DeLoreanDemo extends Demo {
 
     clockDissolve = 0;
 
-    enableControls = false;
+    enableControls = true;
 
     car!: Mesh;
     curveMesh!: Line | Mesh;
@@ -72,9 +74,13 @@ export class DeLoreanDemo extends Demo {
     floorMesh!: Mesh;
     floorMaterial!: ShaderMaterial;
 
+    // lightningInterval!: number | null | undefined;
     lightningMesh!: Line;
-    lightningMaterial!: LineBasicMaterial;
+    lightning!: LightningStrike;
     lightningGeometry!: BufferGeometry;
+    lightningGroup: Group = new Group();
+    lightningMaterial!: LineBasicMaterial;
+    lightningStrikes: Mesh[] = [];
 
     // nonBloomed = (obj: Object3D) => {
     //     if (obj instanceof Mesh && (bloomLayer.test(obj.layers) === false)) {
@@ -440,40 +446,38 @@ export class DeLoreanDemo extends Demo {
         // --- INITIALIZATION LIGHTNING ---
         this.lightningMaterial = new LineBasicMaterial({
             color: 0xADD8E6, 
-            linewidth: 3,
+            linewidth: 5,
             transparent: true,
-            opacity: 0,     
-            // blending: THREE.AdditiveBlending // Для эффекта свечения
+            opacity: 1,     
+            // blending: AdditiveBlending // for glow effect
         });
-        this.lightningGeometry = new BufferGeometry();
-        this.lightningMesh = new Line(this.lightningGeometry, this.lightningMaterial);
-        this.scene.add(this.lightningMesh);
+        // this.lightningGeometry = new BufferGeometry();
+        // this.lightningMesh = new Line(this.lightningGeometry, this.lightningMaterial);
 
 
-        // this.scene.add(this.flashLight);
+        // this.lightning = new LightningStrike({
+        //     sourceOffset: new Vector3(0, 5, 0),
+        //     destOffset: new Vector3(0, -5, 0),
+        //     radius0: 0.2,
+        //     radius1: 0.05,
+        //     minRadius: 0.01,
+        //     maxIterations: 9,
+        //     isEternal: true,
+        // });
 
-                
-        // const size = 300; // Размер сетки (например, от -50 до 50 по X и Z)
-        // const divisionsGrid = 200; // Количество делений
-        // const colorCenterLine = 0x1253ff; // Цвет центральной линии
-        // const colorGrid = 0x1253ff;       // Цвет остальных линий
+        // const mesh = new Mesh(this.lightning, this.lightningMaterial);
+        // this.lightningGroup.add(mesh);
 
-        // this.gridHelper = new GridHelper(size, divisionsGrid, colorCenterLine, colorGrid);
-        // this.gridHelper.position.y = -0.21; // Размещаем на уровне земли
-        // this.scene.add(this.gridHelper);
+        this.createStaticLightningStrikes();
 
+        this.modelContainer.add(this.lightningGroup);
         this.scene.add(this.container);
 
         this.modelContainer.position.set(0, -0.5, 0);
         // this.modelContainer.visible = false;
 
-        // const animation = new Animation(this.modelContainer, this.camera);
-        // const tubeGeometry = new TubeGeometry( animation.curve, 500, 0.05, 4, true );
-        // const material = new MeshBasicMaterial( { color: 0xff00ff } );
-        // this.curveMesh = new Mesh( tubeGeometry, material );
-
         const divisions = 50; // Количество сегментов для каждой кривой в path
-        const animation = new Animation(this.modelContainer, this.camera, this);
+        const animation = new Animation(this.modelContainer, this);
         const curvePoints = animation.path.getPoints(divisions); 
         const lineGeometry = new BufferGeometry().setFromPoints(curvePoints);
         const lineMaterial = new LineBasicMaterial({ color: 0xff0000 }); // Красная линия
@@ -486,6 +490,332 @@ export class DeLoreanDemo extends Demo {
         this.scene.add( this.curveMesh );
 
     }
+
+    createStaticLightningStrikes() {
+        // 1. Очищаем this.lightningGroup от всех предыдущих молний
+        while (this.lightningGroup.children.length > 0) {
+            const child = this.lightningGroup.children[0];
+            this.lightningGroup.remove(child);
+            if (child instanceof Mesh) { // LightningStrike - это Mesh
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) (child.material as Material).dispose();
+            }
+        }
+        this.lightningStrikes = []; // Очищаем массив ссылок
+
+        // --- Определяем начальные и конечные точки молнии в локальных координатах машины ---
+        // Предполагаем, что нос автомобиля находится в (0, 1, 3) относительно this.car,
+        // и его "вправо" - это +X в локальных координатах this.car.
+        const carNoseLocalOffset = new Vector3(0, 1, 3);
+
+        // Примерные точки для 3 молний, чтобы они огибали машину
+        // Эти точки будут служить началом и концом для каждой LightningStrike
+        const boltDefinitions = [
+            {
+                start: carNoseLocalOffset.clone().add(new Vector3(0.6, 0, 0)), // Справа от центра
+                end: carNoseLocalOffset.clone().add(new Vector3(1.6, 0, -8)) // Справа, далеко вперед
+            },
+            {
+                start: carNoseLocalOffset.clone().add(new Vector3(0, 0, 0)), // Сверху от центра
+                end: carNoseLocalOffset.clone().add(new Vector3(0, 1, -4)) // Сверху, далеко вперед
+            },
+            {
+                start: carNoseLocalOffset.clone().add(new Vector3(-0.6, 0, 0)), // Слева от центра
+                end: carNoseLocalOffset.clone().add(new Vector3(-1.6, 0, -8)) // Слева, далеко вперед
+            },
+            {
+                start: carNoseLocalOffset.clone().add(new Vector3(0, 0, 0)), // Сверху от центра
+                end: carNoseLocalOffset.clone().add(new Vector3(0, -1.4, -4)) // Сверху, далеко вперед
+            },
+        ];
+
+        // --- Создаем несколько экземпляров LightningStrike ---
+        boltDefinitions.forEach((def) => {
+            // Параметры для LightningStrike
+            const lightningParams: RayParameters = {
+                // Начальная и конечная точка молнии
+                sourceOffset: def.start,
+                destOffset: def.end,
+                radius0: 0.1,
+                radius1: 0.05,
+                minRadius: 0.01,
+                maxIterations: 9,
+                isEternal: true,
+                // Настройки внешнего вида молнии
+
+                // roughness: 0.9,      // Хаотичность изгибов (0-1)
+                // straightness: 0.7,   // Насколько прямая молния (0-1)
+                // maxIterations: 9,    // Количество итераций для генерации веток
+                // isStatic  : false, // Не генерировать ветки
+
+                // branchProbability: 0.6, // Вероятность генерации ветки (если branchEnabled: true)
+                // branchLength: 0.8,      // Длина ветки относительно основной молнии
+                // branchAngle: 0.1,       // Угол отклонения ветки
+                // minRadius: 0.1,         // Минимальный радиус молнии
+                // maxRadius: 0.3,         // Максимальный радиус молнии
+                // fadingTime: 0.5,        // Время затухания (для анимации, пока не используем)
+                // subs: 10,               // Количество подразделений для каждой линии (больше = плавнее)
+                // timeScale: 0.7,         // Скорость анимации (для анимации, пока не используем)
+                // delay: 0,               // Задержка перед началом (для анимации)
+            };
+
+            const lightning = new LightningStrike(lightningParams);
+
+            const mesh = new Mesh(lightning, this.lightningMaterial)
+            this.lightningGroup.add(mesh);
+            this.lightningStrikes.push(mesh);
+        });
+
+        // --- Отладочные сферы для базовых точек (не забудьте удалить!) ---
+        // Добавим сферы для каждой начальной и конечной точки молнии
+        // boltDefinitions.forEach(def => {
+        //     this.addDebugSpheres([def.start]); // Красные для старта
+        //     this.addDebugSpheres([def.end]);   // Синие для конца
+        // });
+    }
+
+    generateLightningBoltPoints(
+        baseAnchorPoints: Vector3[],
+        maxOffset: number,
+        subdivisionsPerSegment: number = 5
+    ): Vector3[] {
+        const finalPoints: Vector3[] = [];
+        if (baseAnchorPoints.length < 2) return finalPoints;
+
+        finalPoints.push(baseAnchorPoints[0].clone());
+
+        for (let i = 0; i < baseAnchorPoints.length - 1; i++) {
+            const p1 = baseAnchorPoints[i];
+            const p2 = baseAnchorPoints[i + 1];
+
+            for (let j = 1; j <= subdivisionsPerSegment; j++) {
+                const t = j / subdivisionsPerSegment;
+                const interpolatedBasePoint = new Vector3().lerpVectors(p1, p2, t);
+
+                const offset = new Vector3(
+                    (Math.random() - 0.5) * maxOffset,
+                    (Math.random() - 0.5) * maxOffset,
+                    (Math.random() - 0.5) * maxOffset
+                );
+                finalPoints.push(interpolatedBasePoint.add(offset));
+            }
+        }
+        return finalPoints;
+    }
+
+    createStaticMultipleLightningBolts(
+        numBolts: number,
+        maxOffset: number,
+        subdivisionsPerSegment: number,
+        baseOffsetRandomness: number) {
+            // 1. Очищаем this.lightningGroup от всех предыдущих линий и сфер
+        while (this.lightningGroup.children.length > 0) {
+            const child = this.lightningGroup.children[0];
+            this.lightningGroup.remove(child);
+            if (child instanceof Mesh || child instanceof Line) {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) (child.material as Material).dispose();
+            }
+        }
+
+        // --- Определяем базовые якоря для молнии (относительно this.car) ---
+        // Эти значения определяют базовую форму "огибания".
+        // Предполагается, что нос автомобиля находится в (0, 1, 3) относительно this.car,
+        // и его "вправо" - это +X в локальных координатах this.car.
+        const carNoseLocalOffset = new Vector3(0, 1, 3);
+
+        const offsets = [
+            new Vector3(0.6, 0, 0), 
+            new Vector3(0, 0.4, 0), 
+            new Vector3(-0.6, 0, 0)  
+        ];
+
+        // --- Создаем несколько линий молнии (numBolts) ---
+        for (let i = 0; i < numBolts; i++) {
+
+            const carLocalOffset = offsets[i];
+
+            const p0_nose_local = carNoseLocalOffset.clone();
+            const p1_side_local = p0_nose_local.clone()
+                                                .add(new Vector3(0, 0, -2))
+                                                .add(carLocalOffset.clone().multiplyScalar(2));
+            const p2_cross_local = p1_side_local.clone()
+                                                .add(new Vector3(0, 0, -2))
+                                                .add(carLocalOffset.clone().multiplyScalar(2));
+            const p3_end_local = p2_cross_local.clone()
+                                                .add(new Vector3(0, 0, -2));
+
+            const baseCurveAnchorPointsLocal = [p0_nose_local, p1_side_local, p2_cross_local, p3_end_local];
+
+            // --- Для отладки статической формы базовой кривой (не забудьте удалить!) ---
+            // this.addDebugSpheres(baseCurveAnchorPointsLocal);
+            // Применяем небольшое случайное смещение к базовой форме каждой молнии
+            const randomBaseOffsetVector = new Vector3(
+                (Math.random() - 0.5) * baseOffsetRandomness,
+                (Math.random() - 0.5) * baseOffsetRandomness,
+                (Math.random() - 0.5) * baseOffsetRandomness // Если вы хотите смещать по оси Z тоже
+            );
+            const currentBaseAnchorPoints = baseCurveAnchorPointsLocal.map(p => p.clone().add(randomBaseOffsetVector));
+
+            const currentMaxOffset = maxOffset + (Math.random() - 0.5) * (maxOffset * 0.5); // Немного рандомизируем maxOffset
+            const currentSubdivisions = subdivisionsPerSegment + Math.floor((Math.random() - 0.5) * 2); // Немного рандомизируем subdivisions
+
+            const points = this.generateLightningBoltPoints(
+                currentBaseAnchorPoints,
+                currentMaxOffset,
+                currentSubdivisions
+            );
+
+            const geometry = new BufferGeometry().setFromPoints(points);
+            const line = new Line(geometry, this.lightningMaterial); // Используем общий материал
+            this.lightningGroup.add(line); // Добавляем линию в группу
+        }
+    }
+
+    createStaticLightningLines() {
+        // Внимание: Позиции здесь будут *относительными* к this.car!
+        // this.car.position уже (0,0,0) в локальной системе координат this.car.
+        // Направление this.car.getWorldDirection() здесь не нужно,
+        // так как мы работаем в локальной системе координат car.
+
+        // Предположим, нос автомобиля находится на (0, 0, some_forward_offset)
+        // или используем простые относительные смещения.
+        // По умолчанию, модель авто может быть центрирована в (0,0,0) внутри this.car.
+        // Если нос авто направлен по X+, тогда смещение по X+.
+        // Если нос авто направлен по Z+, тогда смещение по Z+.
+
+        // Давайте предположим, что нос автомобиля находится в (0, 0, 0) относительно this.car,
+        // и его "вперед" - это +Z в локальных координатах this.car.
+        // (Если это не так, вам нужно будет скорректировать смещения ниже).
+
+        const carNoseLocalOffset = new Vector3(0, 1, 3); 
+        const carRightLocalOffset = new Vector3(1, 0, 0); // Пример: 1 ед. вправо по X в локальных коорд.
+
+        // --- ОПРЕДЕЛЯЕМ БАЗОВЫЕ ЯКОРНЫЕ ТОЧКИ ДЛЯ ИЗОГНУТОЙ МОЛНИИ (В ЛОКАЛЬНЫХ КООРДИНАТАХ МАШИНЫ) ---
+        // P0: Начинается перед носом машины
+        const p0_nose_local = carNoseLocalOffset.clone();
+
+        // P1: Слегка вперед и в сторону
+        const p1_side_local = p0_nose_local.clone()
+                                        .add(new Vector3(0, 0, -3))
+                                        .add(carRightLocalOffset.clone().multiplyScalar(2));
+
+        // P2: Дальше вперед, пересекаясь обратно к другой стороне или центру
+        const p2_cross_local = p1_side_local.clone()
+                                            .add(new Vector3(0, 0, -4))
+                                            .add(carRightLocalOffset.clone().multiplyScalar(2));
+
+        // P3: Конечная точка молнии, прямо вперед от машины
+        const p3_end_local = p2_cross_local.clone()
+                                        .add(new Vector3(0, 0, -5));
+
+        const baseCurveAnchorPointsLocal = [p0_nose_local, p1_side_local, p2_cross_local, p3_end_local];
+
+        // Генерируем точки для статической молнии
+        const staticLightningPoints = this.generateLightningBoltPoints(
+            baseCurveAnchorPointsLocal,
+            0.5, // maxOffset: Максимальное случайное смещение для зигзага (можно увеличить для большей "зигзагообразности")
+            5    // subdivisionsPerSegment: Количество сегментов между базовыми точками (больше = более детальная кривая)
+        );
+
+        this.lightningGeometry = new BufferGeometry().setFromPoints(staticLightningPoints);
+        this.lightningMesh = new Line(this.lightningGeometry, this.lightningMaterial);
+
+        this.lightningGroup.add(this.lightningMesh);
+
+        this.addDebugSpheres(baseCurveAnchorPointsLocal);
+    }
+
+    addDebugSpheres(points: Vector3[]) {
+        const sphereGeometry = new SphereGeometry(0.15, 8, 8);
+        const sphereMaterial = new MeshBasicMaterial({ color: 0xFFFFFF });
+
+        points.forEach(point => {
+            const sphere = new Mesh(sphereGeometry, sphereMaterial);
+            sphere.position.copy(point);
+            this.lightningGroup.add(sphere);
+        });
+    }
+
+    // public generateLightningBoltPoints(
+    //     start: Vector3,
+    //     direction: Vector3, // Основное направление молнии
+    //     length: number,           // Общая длина молнии
+    //     segments: number,         // Количество сегментов основной линии
+    //     maxOffset: number         // Максимальное случайное смещение для каждого сегмента
+    // ): Vector3[] {
+    //     const points: Vector3[] = [];
+    //     points.push(start.clone()); // Начальная точка
+
+    //     const currentPoint = start.clone();
+    //     const segmentLength = length / segments;
+
+    //     for (let i = 0; i < segments; i++) {
+    //         currentPoint.add(direction.clone().multiplyScalar(segmentLength)); // Двигаемся по основному направлению
+    //         const offset = new Vector3(
+    //             (Math.random() - 0.5) * maxOffset,
+    //             (Math.random() - 0.5) * maxOffset,
+    //             (Math.random() - 0.5) * maxOffset
+    //         );
+    //         points.push(currentPoint.clone().add(offset)); // Добавляем случайное смещение
+    //     }
+    //     return points;
+    // }
+
+    // public triggerLightningEffect(
+    //     carPosition: Vector3,
+    //     carForwardDirection: Vector3 // Куда смотрит машина
+    // ) {
+    //     // Очищаем предыдущий интервал, если молния уже мерцает
+    //     if (this.lightningInterval) {
+    //         clearInterval(this.lightningInterval);
+    //         this.lightningInterval = null;
+    //     }
+    //     this.lightningMaterial.opacity = 0; // Убеждаемся, что начинается невидимой
+
+    //     const lightningDuration = 0.4; // Общая длительность вспышки молнии (например, 0.4 секунды)
+    //     const flickerIntervalMs = 40; // Как часто обновляются вершины (например, 25 раз в секунду)
+    //     let flickerCount = 0;
+    //     const maxFlickers = Math.floor(lightningDuration * 1000 / flickerIntervalMs);
+
+    //     // Определяем базовые параметры молнии
+    //     const boltStart = carPosition.clone().add(carForwardDirection.clone().multiplyScalar(1)); // Начинается немного перед носом машины
+    //     const boltMainDirection = carForwardDirection.clone(); // Направление "вперед"
+    //     const boltLength = 15 + Math.random() * 5; // Длина молнии, немного случайная
+    //     const boltSegments = 7; // Количество основных сегментов
+    //     const boltMaxOffset = 3 + Math.random() * 2; // Максимальное случайное смещение
+
+    //     // --- Анимация появления молнии ---
+    //     gsap.to(this.lightningMaterial, {
+    //         opacity: 1,
+    //         duration: 0.05, // Очень быстрое появление
+    //         ease: "power2.out",
+    //         onComplete: () => {
+    //             // Начинаем мерцание (генерацию новых вершин)
+    //             this.lightningInterval = setInterval(() => {
+    //                 if (flickerCount >= maxFlickers) {
+    //                     clearInterval(this.lightningInterval as number);
+    //                     this.lightningInterval = null;
+    //                     // Анимация затухания молнии
+    //                     gsap.to(this.lightningMaterial, { opacity: 0, duration: 0.2 });
+    //                     return;
+    //                 }
+
+    //                 const points = this.generateLightningBoltPoints(
+    //                     boltStart,
+    //                     boltMainDirection,
+    //                     boltLength,
+    //                     boltSegments,
+    //                     boltMaxOffset
+    //                 );
+    //                 this.lightningGeometry.setFromPoints(points);
+    //                 this.lightningGeometry.attributes.position.needsUpdate = true;
+
+    //                 flickerCount++;
+    //             }, flickerIntervalMs);
+    //         }
+    //     });
+    // }
 
     setGui() {
 
@@ -599,7 +929,7 @@ export class DeLoreanDemo extends Demo {
         //     this.t = 0; 
         // }
 
-        // const t = this.t / 10;
+        // const t = this.t / 100;
         // const position = this.curve.getPoint(t); 
         // this.modelContainer.position.copy(position);
 
@@ -607,7 +937,9 @@ export class DeLoreanDemo extends Demo {
         // const lookAtTarget = new Vector3().addVectors(position, tangent);
         // this.modelContainer.lookAt(lookAtTarget);
 
-
+        this.lightningStrikes.forEach((strike) => {
+            (strike.geometry as LightningStrike).update(dt/1000);
+        });
 
         // this.particles.forEach(mesh => {
         // })
