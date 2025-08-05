@@ -20,6 +20,9 @@ export class Animation {
 
   demo: DeLoreanDemo;
 
+  lightningTime: { value: number } = { value: 0 };
+  lightningTween: gsap.core.Tween | null = null;
+
   private step = {
     x: 0,
     y: 0,
@@ -75,6 +78,50 @@ export class Animation {
     })
     this.createAnimation();
   }
+
+  public triggerLightningEffect(flashDuration: number = 0.4) {
+    // 1. Убеждаемся, что предыдущей анимации нет
+    if (this.lightningTween && this.lightningTween.isActive()) {
+        return;
+    }
+
+    // 2. Создаем новые молнии перед запуском анимации
+    this.demo.createStaticLightningStrikes();
+
+    // 3. Быстрое появление молнии
+    gsap.to(this.demo.lightningMaterial, {
+        opacity: 1,
+        duration: 0.05,
+        ease: "power2.out",
+        onComplete: () => {
+            // 4. Запускаем GSAP-твин, который анимирует время для мерцания молнии
+            this.lightningTime.value = 0; // Сбрасываем время
+            this.lightningTween = gsap.to(this.lightningTime, {
+                value: flashDuration, // Анимируем до общей длительности вспышки
+                duration: flashDuration,
+                ease: "none", // Линейное изменение времени
+                onComplete: () => {
+                    // 5. Затухание после окончания мерцания
+                    gsap.to(this.demo.lightningMaterial, {
+                        opacity: 0,
+                        duration: 0.2,
+                        onComplete: () => {
+                            // 6. Очищаем все ресурсы после затухания
+                            this.demo.lightningStrikes.forEach(bolt => {
+                                if (bolt.parent) bolt.parent.remove(bolt);
+                                // bolt.geometry.dispose();
+                                // bolt.material.dispose();
+                            });
+                            this.demo.lightningStrikes = [];
+                            this.demo.lightningGroup.clear();
+                        }
+                    });
+                }
+            });
+        }
+    });
+  }
+
   createAnimation() {
 
     this.timeline.to(this.car.position, {y: 0, duration: 3, 
@@ -206,7 +253,7 @@ export class Animation {
 
         this.car.quaternion.slerp(targetQuaternion, 0.06); // (0.05 - 0.2) for smoothness
 
-        if (t > 0.4 && t < 0.7) {
+        if (t > 0.6 && t < 0.9 && this.demo.lightningStrikes.length === 0) {
           // const numBolts = 3;             // Количество линий молнии
           // const maxOffset = 0.5;          // Максимальное случайное смещение для зигзага
           // const subdivisionsPerSegment = 5; // Детализация каждого изгиба
@@ -214,6 +261,7 @@ export class Animation {
 
           // this.demo.createStaticMultipleLightningBolts(numBolts, maxOffset, subdivisionsPerSegment, baseOffsetRandomness);
           // console.log(this.demo.lightningMaterial.linewidth);
+          this.triggerLightningEffect(0.5);
         }
 
       }
@@ -235,7 +283,7 @@ export class Animation {
       }
     }, 6);
 
-    // this.timeline.to(this.demo.camera.position, { y: 3.7, duration: 9+2 }, 0);
+    this.timeline.to(this.demo.camera.position, { y: 3.7, duration: 9+2 }, 0);
 
   }
 };

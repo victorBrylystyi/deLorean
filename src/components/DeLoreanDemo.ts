@@ -61,7 +61,7 @@ export class DeLoreanDemo extends Demo {
 
     clockDissolve = 0;
 
-    enableControls = true;
+    enableControls = false;
 
     car!: Mesh;
     curveMesh!: Line | Mesh;
@@ -448,7 +448,9 @@ export class DeLoreanDemo extends Demo {
             color: 0xADD8E6, 
             linewidth: 5,
             transparent: true,
-            opacity: 1,     
+            opacity: 0,     
+            depthTest: true,
+            depthWrite: true
             // blending: AdditiveBlending // for glow effect
         });
         // this.lightningGeometry = new BufferGeometry();
@@ -468,7 +470,7 @@ export class DeLoreanDemo extends Demo {
         // const mesh = new Mesh(this.lightning, this.lightningMaterial);
         // this.lightningGroup.add(mesh);
 
-        this.createStaticLightningStrikes();
+        // this.createStaticLightningStrikes();
 
         this.modelContainer.add(this.lightningGroup);
         this.scene.add(this.container);
