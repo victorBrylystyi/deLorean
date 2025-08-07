@@ -50,8 +50,8 @@ export class Animation {
     const segment2_end = new Vector3(27.95, yStart + 3, 0);
 
     const segment3_start = segment2_end;
-    const segment3_control = new Vector3(24.95, yStart + 3, 7.65);
-    const segment3_end = new Vector3(15.86, yStart, 1.56);
+    const segment3_control = new Vector3(24.95, yStart + 3, 10.65);
+    const segment3_end = new Vector3(15.86, yStart, 0.3);
 
     const segment4_start = segment3_end;
     const segment4_control = new Vector3(8, yStart-0.2, -1.58);
@@ -91,7 +91,7 @@ export class Animation {
     // 3. Быстрое появление молнии
     gsap.to(this.demo.lightningMaterial, {
         opacity: 1,
-        duration: 0.05,
+        duration: 0.1,
         ease: "power2.out",
         onComplete: () => {
             // 4. Запускаем GSAP-твин, который анимирует время для мерцания молнии
@@ -126,12 +126,12 @@ export class Animation {
 
     this.timeline.to(this.car.position, {y: 0, duration: 3, 
       onStart: () => {
+
         this.car.position.set(0,-0.5, 0);
         this.car.lookAt(new Vector3(2, -0.5, 0));
         this.demo.carPosition.copy(this.car.position);
 
-        const t = 0.001
-
+        const t = 0.001;
 
         const path = this.path;
 
@@ -149,12 +149,16 @@ export class Animation {
         
         const targetQuaternion = tempObject.quaternion;
 
-        this.car.quaternion.copy(targetQuaternion); // (0.05 - 0.2) for smoothness
+        this.car.quaternion.copy(targetQuaternion);
 
         dissolveSettings.progress = dissolveSettings.k;
         dissolveUniformData.uFreq.value = dissolveSettings.kFreg * 2.0;
 
-        this.demo.floorMaterial.uniforms.uEffectRadius.value = 0.0; 
+        this.demo.floorMaterial.uniforms.uEffectRadius.value = 0.0;
+
+        this.engineMaterial.forEach((mat: Dissolve) => {
+            mat.emissive.copy(startColor);
+        });
       },
       onUpdate: () => {
         const t = (this.car.position.y + 0.5) * 5; // Adjusted to match the animation
@@ -163,23 +167,12 @@ export class Animation {
         dissolveUniformData.uFreq.value = Math.abs(Math.cos(t * dissolveSettings.kFreg)) * 2.0;
 
         this.demo.floorMaterial.uniforms.uEffectRadius.value = t * (20/2.5); // Adjusted for effect radius
+
+        if (t > 0.35 && t < 0.9 && this.demo.lightningStrikes.length === 0) {
+          this.triggerLightningEffect(0.3);
+        }
       }
     }, 0);
-
-    // this.timeline.to(this.demo.flashLight, { intensity: 300, duration: 1, ease: "power1.out",
-    //   onStart: () => {
- 
-    //     this.demo.flashLight.position.copy(this.car.position);
-    //     this.demo.flashLight.position.x -= 1;
-    //     this.demo.flashLight.position.y += 1;
-    //            console.log('Flash light on', this.demo.flashLight.position.toArray());
-    //   },
-    //   onUpdate: () => {
-    //   },
-    //   onComplete: () => {
-    //     this.demo.flashLight.intensity = 0;
-    //   }
-    // }, 8.3);
 
     this.timeline.to(this.step, {a: 1, z: 0, duration: 1, 
       onStart: () => {
@@ -197,7 +190,7 @@ export class Animation {
             mat.emissive.copy(interpolatedColor);
         });
       }, 
-    },  '>');
+    }, '>');
 
     this.timeline.to(this.step, {x: 1, duration: 8, 
       onUpdate: () => {
@@ -231,7 +224,7 @@ export class Animation {
         const timeRotation = t + bias < 1 ? t + bias : 1; // Prevents out of bounds error
 
         let tangent: Vector3 = new Vector3();
-        if (t > 0.15 && t < 0.7) {
+        if (t > 0.15 && t < 0.9) {
           const tt = path.getTangent(timeRotation)
           tangent.lerpVectors(tt, path.getTangent(t), 0.2);
 
@@ -244,7 +237,6 @@ export class Animation {
           tangent.copy(path.getTangent(t));
         }
 
-
         const tempObject = new Object3D();
         tempObject.position.copy(position);
         tempObject.lookAt(position.clone().add(tangent)); 
@@ -253,15 +245,8 @@ export class Animation {
 
         this.car.quaternion.slerp(targetQuaternion, 0.06); // (0.05 - 0.2) for smoothness
 
-        if (t > 0.6 && t < 0.9 && this.demo.lightningStrikes.length === 0) {
-          // const numBolts = 3;             // Количество линий молнии
-          // const maxOffset = 0.5;          // Максимальное случайное смещение для зигзага
-          // const subdivisionsPerSegment = 5; // Детализация каждого изгиба
-          // const baseOffsetRandomness = 0.5; // Случайное смещение для каждой молнии относительно базовой кривой
-
-          // this.demo.createStaticMultipleLightningBolts(numBolts, maxOffset, subdivisionsPerSegment, baseOffsetRandomness);
-          // console.log(this.demo.lightningMaterial.linewidth);
-          this.triggerLightningEffect(0.5);
+        if (t > 0.35 && t < 0.9 && this.demo.lightningStrikes.length === 0) {
+          this.triggerLightningEffect(0.3);
         }
 
       }
@@ -273,7 +258,6 @@ export class Animation {
         const progress = Math.cos(t) * -dissolveSettings.k;
 
         dissolveSettings.progress = progress;
-        // console.log(dissolveSettings.progress);
         dissolveUniformData.uFreq.value = Math.abs(Math.cos(t * dissolveSettings.kFreg)) * 2.0;
       },
       onStart: () => {
