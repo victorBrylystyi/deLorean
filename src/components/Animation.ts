@@ -245,7 +245,10 @@ export class Animation {
 
         this.car.quaternion.slerp(targetQuaternion, 0.06); // (0.05 - 0.2) for smoothness
 
-        if (t > 0.35 && t < 0.9 && this.demo.lightningStrikes.length === 0) {
+        if (t > 0.55 && t < 0.9 && this.demo.lightningStrikes.length === 0) {
+          // if (t > 0.7 && t < 0.8) {
+          //   this.demo.lightningMaterial
+          // }
           this.triggerLightningEffect(0.3);
         }
 

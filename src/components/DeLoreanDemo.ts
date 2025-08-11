@@ -79,7 +79,7 @@ export class DeLoreanDemo extends Demo {
     lightning!: LightningStrike;
     lightningGeometry!: BufferGeometry;
     lightningGroup: Group = new Group();
-    lightningMaterial!: LineBasicMaterial;
+    lightningMaterial!: MeshBasicMaterial;
     lightningStrikes: Mesh[] = [];
 
     // nonBloomed = (obj: Object3D) => {
@@ -444,9 +444,9 @@ export class DeLoreanDemo extends Demo {
         this.scene.add(this.floorMesh);
 
         // --- INITIALIZATION LIGHTNING ---
-        this.lightningMaterial = new LineBasicMaterial({
+        this.lightningMaterial = new MeshBasicMaterial({
             color: 0xADD8E6, 
-            linewidth: 5,
+            // linewidth: 5,
             transparent: true,
             opacity: 0,     
             depthTest: true,
@@ -538,8 +538,8 @@ export class DeLoreanDemo extends Demo {
                 // Начальная и конечная точка молнии
                 sourceOffset: def.start,
                 destOffset: def.end,
-                radius0: 0.1,
-                radius1: 0.05,
+                radius0: 0.02,
+                radius1: 0.15,
                 minRadius: 0.01,
                 maxIterations: 9,
                 isEternal: true,
@@ -568,165 +568,163 @@ export class DeLoreanDemo extends Demo {
             this.lightningStrikes.push(mesh);
         });
 
-        // --- Отладочные сферы для базовых точек (не забудьте удалить!) ---
-        // Добавим сферы для каждой начальной и конечной точки молнии
         // boltDefinitions.forEach(def => {
         //     this.addDebugSpheres([def.start]); // Красные для старта
         //     this.addDebugSpheres([def.end]);   // Синие для конца
         // });
     }
 
-    generateLightningBoltPoints(
-        baseAnchorPoints: Vector3[],
-        maxOffset: number,
-        subdivisionsPerSegment: number = 5
-    ): Vector3[] {
-        const finalPoints: Vector3[] = [];
-        if (baseAnchorPoints.length < 2) return finalPoints;
+    // generateLightningBoltPoints(
+    //     baseAnchorPoints: Vector3[],
+    //     maxOffset: number,
+    //     subdivisionsPerSegment: number = 5
+    // ): Vector3[] {
+    //     const finalPoints: Vector3[] = [];
+    //     if (baseAnchorPoints.length < 2) return finalPoints;
 
-        finalPoints.push(baseAnchorPoints[0].clone());
+    //     finalPoints.push(baseAnchorPoints[0].clone());
 
-        for (let i = 0; i < baseAnchorPoints.length - 1; i++) {
-            const p1 = baseAnchorPoints[i];
-            const p2 = baseAnchorPoints[i + 1];
+    //     for (let i = 0; i < baseAnchorPoints.length - 1; i++) {
+    //         const p1 = baseAnchorPoints[i];
+    //         const p2 = baseAnchorPoints[i + 1];
 
-            for (let j = 1; j <= subdivisionsPerSegment; j++) {
-                const t = j / subdivisionsPerSegment;
-                const interpolatedBasePoint = new Vector3().lerpVectors(p1, p2, t);
+    //         for (let j = 1; j <= subdivisionsPerSegment; j++) {
+    //             const t = j / subdivisionsPerSegment;
+    //             const interpolatedBasePoint = new Vector3().lerpVectors(p1, p2, t);
 
-                const offset = new Vector3(
-                    (Math.random() - 0.5) * maxOffset,
-                    (Math.random() - 0.5) * maxOffset,
-                    (Math.random() - 0.5) * maxOffset
-                );
-                finalPoints.push(interpolatedBasePoint.add(offset));
-            }
-        }
-        return finalPoints;
-    }
+    //             const offset = new Vector3(
+    //                 (Math.random() - 0.5) * maxOffset,
+    //                 (Math.random() - 0.5) * maxOffset,
+    //                 (Math.random() - 0.5) * maxOffset
+    //             );
+    //             finalPoints.push(interpolatedBasePoint.add(offset));
+    //         }
+    //     }
+    //     return finalPoints;
+    // }
 
-    createStaticMultipleLightningBolts(
-        numBolts: number,
-        maxOffset: number,
-        subdivisionsPerSegment: number,
-        baseOffsetRandomness: number) {
-            // 1. Очищаем this.lightningGroup от всех предыдущих линий и сфер
-        while (this.lightningGroup.children.length > 0) {
-            const child = this.lightningGroup.children[0];
-            this.lightningGroup.remove(child);
-            if (child instanceof Mesh || child instanceof Line) {
-                if (child.geometry) child.geometry.dispose();
-                if (child.material) (child.material as Material).dispose();
-            }
-        }
+    // createStaticMultipleLightningBolts(
+    //     numBolts: number,
+    //     maxOffset: number,
+    //     subdivisionsPerSegment: number,
+    //     baseOffsetRandomness: number) {
+    //         // 1. Очищаем this.lightningGroup от всех предыдущих линий и сфер
+    //     while (this.lightningGroup.children.length > 0) {
+    //         const child = this.lightningGroup.children[0];
+    //         this.lightningGroup.remove(child);
+    //         if (child instanceof Mesh || child instanceof Line) {
+    //             if (child.geometry) child.geometry.dispose();
+    //             if (child.material) (child.material as Material).dispose();
+    //         }
+    //     }
 
-        // --- Определяем базовые якоря для молнии (относительно this.car) ---
-        // Эти значения определяют базовую форму "огибания".
-        // Предполагается, что нос автомобиля находится в (0, 1, 3) относительно this.car,
-        // и его "вправо" - это +X в локальных координатах this.car.
-        const carNoseLocalOffset = new Vector3(0, 1, 3);
+    //     // --- Определяем базовые якоря для молнии (относительно this.car) ---
+    //     // Эти значения определяют базовую форму "огибания".
+    //     // Предполагается, что нос автомобиля находится в (0, 1, 3) относительно this.car,
+    //     // и его "вправо" - это +X в локальных координатах this.car.
+    //     const carNoseLocalOffset = new Vector3(0, 1, 3);
 
-        const offsets = [
-            new Vector3(0.6, 0, 0), 
-            new Vector3(0, 0.4, 0), 
-            new Vector3(-0.6, 0, 0)  
-        ];
+    //     const offsets = [
+    //         new Vector3(0.6, 0, 0), 
+    //         new Vector3(0, 0.4, 0), 
+    //         new Vector3(-0.6, 0, 0)  
+    //     ];
 
-        // --- Создаем несколько линий молнии (numBolts) ---
-        for (let i = 0; i < numBolts; i++) {
+    //     // --- Создаем несколько линий молнии (numBolts) ---
+    //     for (let i = 0; i < numBolts; i++) {
 
-            const carLocalOffset = offsets[i];
+    //         const carLocalOffset = offsets[i];
 
-            const p0_nose_local = carNoseLocalOffset.clone();
-            const p1_side_local = p0_nose_local.clone()
-                                                .add(new Vector3(0, 0, -2))
-                                                .add(carLocalOffset.clone().multiplyScalar(2));
-            const p2_cross_local = p1_side_local.clone()
-                                                .add(new Vector3(0, 0, -2))
-                                                .add(carLocalOffset.clone().multiplyScalar(2));
-            const p3_end_local = p2_cross_local.clone()
-                                                .add(new Vector3(0, 0, -2));
+    //         const p0_nose_local = carNoseLocalOffset.clone();
+    //         const p1_side_local = p0_nose_local.clone()
+    //                                             .add(new Vector3(0, 0, -2))
+    //                                             .add(carLocalOffset.clone().multiplyScalar(2));
+    //         const p2_cross_local = p1_side_local.clone()
+    //                                             .add(new Vector3(0, 0, -2))
+    //                                             .add(carLocalOffset.clone().multiplyScalar(2));
+    //         const p3_end_local = p2_cross_local.clone()
+    //                                             .add(new Vector3(0, 0, -2));
 
-            const baseCurveAnchorPointsLocal = [p0_nose_local, p1_side_local, p2_cross_local, p3_end_local];
+    //         const baseCurveAnchorPointsLocal = [p0_nose_local, p1_side_local, p2_cross_local, p3_end_local];
 
-            // --- Для отладки статической формы базовой кривой (не забудьте удалить!) ---
-            // this.addDebugSpheres(baseCurveAnchorPointsLocal);
-            // Применяем небольшое случайное смещение к базовой форме каждой молнии
-            const randomBaseOffsetVector = new Vector3(
-                (Math.random() - 0.5) * baseOffsetRandomness,
-                (Math.random() - 0.5) * baseOffsetRandomness,
-                (Math.random() - 0.5) * baseOffsetRandomness // Если вы хотите смещать по оси Z тоже
-            );
-            const currentBaseAnchorPoints = baseCurveAnchorPointsLocal.map(p => p.clone().add(randomBaseOffsetVector));
+    //         // --- Для отладки статической формы базовой кривой (не забудьте удалить!) ---
+    //         // this.addDebugSpheres(baseCurveAnchorPointsLocal);
+    //         // Применяем небольшое случайное смещение к базовой форме каждой молнии
+    //         const randomBaseOffsetVector = new Vector3(
+    //             (Math.random() - 0.5) * baseOffsetRandomness,
+    //             (Math.random() - 0.5) * baseOffsetRandomness,
+    //             (Math.random() - 0.5) * baseOffsetRandomness // Если вы хотите смещать по оси Z тоже
+    //         );
+    //         const currentBaseAnchorPoints = baseCurveAnchorPointsLocal.map(p => p.clone().add(randomBaseOffsetVector));
 
-            const currentMaxOffset = maxOffset + (Math.random() - 0.5) * (maxOffset * 0.5); // Немного рандомизируем maxOffset
-            const currentSubdivisions = subdivisionsPerSegment + Math.floor((Math.random() - 0.5) * 2); // Немного рандомизируем subdivisions
+    //         const currentMaxOffset = maxOffset + (Math.random() - 0.5) * (maxOffset * 0.5); // Немного рандомизируем maxOffset
+    //         const currentSubdivisions = subdivisionsPerSegment + Math.floor((Math.random() - 0.5) * 2); // Немного рандомизируем subdivisions
 
-            const points = this.generateLightningBoltPoints(
-                currentBaseAnchorPoints,
-                currentMaxOffset,
-                currentSubdivisions
-            );
+    //         const points = this.generateLightningBoltPoints(
+    //             currentBaseAnchorPoints,
+    //             currentMaxOffset,
+    //             currentSubdivisions
+    //         );
 
-            const geometry = new BufferGeometry().setFromPoints(points);
-            const line = new Line(geometry, this.lightningMaterial); // Используем общий материал
-            this.lightningGroup.add(line); // Добавляем линию в группу
-        }
-    }
+    //         const geometry = new BufferGeometry().setFromPoints(points);
+    //         const line = new Line(geometry, this.lightningMaterial); // Используем общий материал
+    //         this.lightningGroup.add(line); // Добавляем линию в группу
+    //     }
+    // }
 
-    createStaticLightningLines() {
-        // Внимание: Позиции здесь будут *относительными* к this.car!
-        // this.car.position уже (0,0,0) в локальной системе координат this.car.
-        // Направление this.car.getWorldDirection() здесь не нужно,
-        // так как мы работаем в локальной системе координат car.
+    // createStaticLightningLines() {
+    //     // Внимание: Позиции здесь будут *относительными* к this.car!
+    //     // this.car.position уже (0,0,0) в локальной системе координат this.car.
+    //     // Направление this.car.getWorldDirection() здесь не нужно,
+    //     // так как мы работаем в локальной системе координат car.
 
-        // Предположим, нос автомобиля находится на (0, 0, some_forward_offset)
-        // или используем простые относительные смещения.
-        // По умолчанию, модель авто может быть центрирована в (0,0,0) внутри this.car.
-        // Если нос авто направлен по X+, тогда смещение по X+.
-        // Если нос авто направлен по Z+, тогда смещение по Z+.
+    //     // Предположим, нос автомобиля находится на (0, 0, some_forward_offset)
+    //     // или используем простые относительные смещения.
+    //     // По умолчанию, модель авто может быть центрирована в (0,0,0) внутри this.car.
+    //     // Если нос авто направлен по X+, тогда смещение по X+.
+    //     // Если нос авто направлен по Z+, тогда смещение по Z+.
 
-        // Давайте предположим, что нос автомобиля находится в (0, 0, 0) относительно this.car,
-        // и его "вперед" - это +Z в локальных координатах this.car.
-        // (Если это не так, вам нужно будет скорректировать смещения ниже).
+    //     // Давайте предположим, что нос автомобиля находится в (0, 0, 0) относительно this.car,
+    //     // и его "вперед" - это +Z в локальных координатах this.car.
+    //     // (Если это не так, вам нужно будет скорректировать смещения ниже).
 
-        const carNoseLocalOffset = new Vector3(0, 1, 3); 
-        const carRightLocalOffset = new Vector3(1, 0, 0); // Пример: 1 ед. вправо по X в локальных коорд.
+    //     const carNoseLocalOffset = new Vector3(0, 1, 3); 
+    //     const carRightLocalOffset = new Vector3(1, 0, 0); // Пример: 1 ед. вправо по X в локальных коорд.
 
-        // --- ОПРЕДЕЛЯЕМ БАЗОВЫЕ ЯКОРНЫЕ ТОЧКИ ДЛЯ ИЗОГНУТОЙ МОЛНИИ (В ЛОКАЛЬНЫХ КООРДИНАТАХ МАШИНЫ) ---
-        // P0: Начинается перед носом машины
-        const p0_nose_local = carNoseLocalOffset.clone();
+    //     // --- ОПРЕДЕЛЯЕМ БАЗОВЫЕ ЯКОРНЫЕ ТОЧКИ ДЛЯ ИЗОГНУТОЙ МОЛНИИ (В ЛОКАЛЬНЫХ КООРДИНАТАХ МАШИНЫ) ---
+    //     // P0: Начинается перед носом машины
+    //     const p0_nose_local = carNoseLocalOffset.clone();
 
-        // P1: Слегка вперед и в сторону
-        const p1_side_local = p0_nose_local.clone()
-                                        .add(new Vector3(0, 0, -3))
-                                        .add(carRightLocalOffset.clone().multiplyScalar(2));
+    //     // P1: Слегка вперед и в сторону
+    //     const p1_side_local = p0_nose_local.clone()
+    //                                     .add(new Vector3(0, 0, -3))
+    //                                     .add(carRightLocalOffset.clone().multiplyScalar(2));
 
-        // P2: Дальше вперед, пересекаясь обратно к другой стороне или центру
-        const p2_cross_local = p1_side_local.clone()
-                                            .add(new Vector3(0, 0, -4))
-                                            .add(carRightLocalOffset.clone().multiplyScalar(2));
+    //     // P2: Дальше вперед, пересекаясь обратно к другой стороне или центру
+    //     const p2_cross_local = p1_side_local.clone()
+    //                                         .add(new Vector3(0, 0, -4))
+    //                                         .add(carRightLocalOffset.clone().multiplyScalar(2));
 
-        // P3: Конечная точка молнии, прямо вперед от машины
-        const p3_end_local = p2_cross_local.clone()
-                                        .add(new Vector3(0, 0, -5));
+    //     // P3: Конечная точка молнии, прямо вперед от машины
+    //     const p3_end_local = p2_cross_local.clone()
+    //                                     .add(new Vector3(0, 0, -5));
 
-        const baseCurveAnchorPointsLocal = [p0_nose_local, p1_side_local, p2_cross_local, p3_end_local];
+    //     const baseCurveAnchorPointsLocal = [p0_nose_local, p1_side_local, p2_cross_local, p3_end_local];
 
-        // Генерируем точки для статической молнии
-        const staticLightningPoints = this.generateLightningBoltPoints(
-            baseCurveAnchorPointsLocal,
-            0.5, // maxOffset: Максимальное случайное смещение для зигзага (можно увеличить для большей "зигзагообразности")
-            5    // subdivisionsPerSegment: Количество сегментов между базовыми точками (больше = более детальная кривая)
-        );
+    //     // Генерируем точки для статической молнии
+    //     const staticLightningPoints = this.generateLightningBoltPoints(
+    //         baseCurveAnchorPointsLocal,
+    //         0.5, // maxOffset: Максимальное случайное смещение для зигзага (можно увеличить для большей "зигзагообразности")
+    //         5    // subdivisionsPerSegment: Количество сегментов между базовыми точками (больше = более детальная кривая)
+    //     );
 
-        this.lightningGeometry = new BufferGeometry().setFromPoints(staticLightningPoints);
-        this.lightningMesh = new Line(this.lightningGeometry, this.lightningMaterial);
+    //     this.lightningGeometry = new BufferGeometry().setFromPoints(staticLightningPoints);
+    //     this.lightningMesh = new Line(this.lightningGeometry, this.lightningMaterial);
 
-        this.lightningGroup.add(this.lightningMesh);
+    //     this.lightningGroup.add(this.lightningMesh);
 
-        this.addDebugSpheres(baseCurveAnchorPointsLocal);
-    }
+    //     this.addDebugSpheres(baseCurveAnchorPointsLocal);
+    // }
 
     addDebugSpheres(points: Vector3[]) {
         const sphereGeometry = new SphereGeometry(0.15, 8, 8);

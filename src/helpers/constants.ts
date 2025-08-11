@@ -29,8 +29,8 @@ export const dissolveUniformData = {
 };
 
 export const bloomUniformData = {
-    uStrength: new Uniform(0.95),
-    uRadius: new Uniform(0.1),
+    uStrength: new Uniform(1.0),
+    uRadius: new Uniform(0.3),
     uThreshold: new Uniform(0.0),
 };
 
