@@ -84,34 +84,36 @@ export class Demo {
     }
 
     initGUI() {
-        this.gui.add(dissolveUniformData.uEdge, "value", 0.001, 5.0, 0.001).name("Edge");
-        this.gui.addColor(dissolveUniformData.uEdgeColor, "value").name("Edge Color").onChange((color: string) => {
-            dissolveUniformData.uEdgeColor.value.set(color);
-        });
-        this.gui.addColor(dissolveUniformData.engineColor, "value").name("Engine Color").onChange((color: string) => {
-            dissolveUniformData.engineColor.value.set(color);
-            this.engineMaterial.forEach((mat: Dissolve) => {
-                mat.emissive.set(color);
-                // mat.needsUpdate = true;
+        if (this.mountStats) {
+            this.gui.add(dissolveUniformData.uEdge, "value", 0.001, 5.0, 0.001).name("Edge");
+            this.gui.addColor(dissolveUniformData.uEdgeColor, "value").name("Edge Color").onChange((color: string) => {
+                dissolveUniformData.uEdgeColor.value.set(color);
             });
-        });
-        this.gui.add(dissolveUniformData.uFreq, "value", 0.001, 2.0, 0.001).name("Frequency");
-        this.gui.add(dissolveUniformData.uAmp, "value", 0.1, 20.0, 0.001).name("Amplitude");
+            this.gui.addColor(dissolveUniformData.engineColor, "value").name("Engine Color").onChange((color: string) => {
+                dissolveUniformData.engineColor.value.set(color);
+                this.engineMaterial.forEach((mat: Dissolve) => {
+                    mat.emissive.set(color);
+                    // mat.needsUpdate = true;
+                });
+            });
+            this.gui.add(dissolveUniformData.uFreq, "value", 0.001, 2.0, 0.001).name("Frequency");
+            this.gui.add(dissolveUniformData.uAmp, "value", 0.1, 20.0, 0.001).name("Amplitude");
 
-        this.gui.add(bloomUniformData.uStrength, "value", 0.0, 10.0, 0.001).name("Bloom Strength").onChange((value: number) => {
-            this.bloomPass.strength = value;
-        });
-        this.gui.add(bloomUniformData.uRadius, "value", 0.0, 5.0, 0.001).name("Bloom Radius").onChange((value: number) => {
-            this.bloomPass.radius = value;
-        });
-        this.gui.add(bloomUniformData.uThreshold, "value", 0.0, 1.0, 0.001).name("Bloom Threshold").onChange((value: number) => {
-            this.bloomPass.threshold = value;
-        });
+            this.gui.add(bloomUniformData.uStrength, "value", 0.0, 10.0, 0.001).name("Bloom Strength").onChange((value: number) => {
+                this.bloomPass.strength = value;
+            });
+            this.gui.add(bloomUniformData.uRadius, "value", 0.0, 5.0, 0.001).name("Bloom Radius").onChange((value: number) => {
+                this.bloomPass.radius = value;
+            });
+            this.gui.add(bloomUniformData.uThreshold, "value", 0.0, 1.0, 0.001).name("Bloom Threshold").onChange((value: number) => {
+                this.bloomPass.threshold = value;
+            });
 
-        this.gui.add(particleDataConstants, "particleSpeedFactor", 0.0, 2.0, 0.001).name("Particle Speed Factor");
-        this.gui.add(particleDataConstants.velocityFactor, "x", -10.0, 10.0, 0.001).name("Velocity X");
-        this.gui.add(particleDataConstants.velocityFactor, "y", -10.0, 10.0, 0.001).name("Velocity Y");
-        this.gui.add(particleDataConstants, "waveAmplitude", 0.0, 10.0, 0.001).name("Wave Amplitude");
+            this.gui.add(particleDataConstants, "particleSpeedFactor", 0.0, 2.0, 0.001).name("Particle Speed Factor");
+            this.gui.add(particleDataConstants.velocityFactor, "x", -10.0, 10.0, 0.001).name("Velocity X");
+            this.gui.add(particleDataConstants.velocityFactor, "y", -10.0, 10.0, 0.001).name("Velocity Y");
+            this.gui.add(particleDataConstants, "waveAmplitude", 0.0, 10.0, 0.001).name("Wave Amplitude");
+        }
     }
 
     unmount() {

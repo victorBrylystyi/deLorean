@@ -67,7 +67,7 @@ export class DeLoreanDemo extends Demo {
     curveMesh!: Line | Mesh;
     clock = new Clock();
     t = 0;
-    visibleCurve = true;
+    visibleCurve = false;
     curve!: CatmullRomCurve3;
     flashLight = new PointLight(0xffffff, 0, 100);
     carPosition = new Vector3();
@@ -818,34 +818,35 @@ export class DeLoreanDemo extends Demo {
     // }
 
     setGui() {
-
-        this.gui.add(materialParams, "metalness", 0.0, 1.0, 0.001).name("Metalness").onChange((value: number) => {
-            this.materials.forEach(material => {
-                material.metalness = value;
+        if (this.mountStats) {
+            this.gui.add(materialParams, "metalness", 0.0, 1.0, 0.001).name("Metalness").onChange((value: number) => {
+                this.materials.forEach(material => {
+                    material.metalness = value;
+                });
+                materialParams.metalness = value;
             });
-            materialParams.metalness = value;
-        });
-        this.gui.add(materialParams, "roughness", 0.0, 1.0, 0.001).name("Roughness").onChange((value: number) => {
-            this.materials.forEach(material => {
-                material.roughness = value;
+            this.gui.add(materialParams, "roughness", 0.0, 1.0, 0.001).name("Roughness").onChange((value: number) => {
+                this.materials.forEach(material => {
+                    material.roughness = value;
+                });
+                materialParams.roughness = value;
             });
-            materialParams.roughness = value;
-        });
 
-        this.gui.add(dissolveSettings, "animate").name("Animate").onChange((value: boolean) => {
-            dissolveSettings.animate = value;
-        });
-        this.gui.add(dissolveSettings, "progress", -dissolveSettings.k, dissolveSettings.k, 0.001).name("Progress");
+            this.gui.add(dissolveSettings, "animate").name("Animate").onChange((value: boolean) => {
+                dissolveSettings.animate = value;
+            });
+            this.gui.add(dissolveSettings, "progress", -dissolveSettings.k, dissolveSettings.k, 0.001).name("Progress");
 
-        this.gui.add(dissolveSettings, "kFreg", 0.0, 1.0, 0.001).name("K Freg");
-        // this.gui.add(this, "enableControls").name("Controls").onChange((value: boolean) => {
-        //     this.controls.enabled = value;
-        // });
-        this.gui.add(this, "visibleCurve").name("Curve Visibility").onChange((value: boolean) => {
-            if (this.curveMesh) {
-                this.curveMesh.visible = value;
-            }
-        });
+            this.gui.add(dissolveSettings, "kFreg", 0.0, 1.0, 0.001).name("K Freg");
+            // this.gui.add(this, "enableControls").name("Controls").onChange((value: boolean) => {
+            //     this.controls.enabled = value;
+            // });
+            this.gui.add(this, "visibleCurve").name("Curve Visibility").onChange((value: boolean) => {
+                if (this.curveMesh) {
+                    this.curveMesh.visible = value;
+                }
+            });
+        }
     }
 
     unmount() {

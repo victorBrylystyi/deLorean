@@ -3,4 +3,4 @@ import { DeLoreanDemo } from './components/DeLoreanDemo';
 
 
 
-new DeLoreanDemo(document.getElementById('scene') as HTMLDivElement, true);
+new DeLoreanDemo(document.getElementById('scene') as HTMLDivElement, false);
